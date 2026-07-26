@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BCV API · Exchange Rates</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        body {
+            background: #0a0a0f;
+            color: #e8e8f0;
+        }
+        
+        .bg-dark {
+            background: #0a0a0f;
+        }
+        
+        .bg-dark-card {
+            background: #14141c;
+            border: 1px solid #2a2a35;
+        }
+        
+        .bg-dark-card-hover:hover {
+            border-color: #3b82f6;
+            transition: all 0.3s ease;
+        }
+        
+        .gradient-border {
+            position: relative;
+        }
+        
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 12px;
+            padding: 1px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+        }
+        
+        .glow {
+            text-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
+        }
+        
+        .code-dark {
+            background: #0d0d14;
+            border: 1px solid #2a2a35;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            color: #d4d4e0;
+        }
+        
+        .code-dark .comment {
+            color: #6b7280;
+        }
+        
+        .code-dark .string {
+            color: #34d399;
+        }
+        
+        .code-dark .keyword {
+            color: #818cf8;
+        }
+        
+        .code-dark .function {
+            color: #f472b6;
+        }
+        
+        .code-dark .variable {
+            color: #fbbf24;
+        }
+        
+        .code-dark .number {
+            color: #60a5fa;
+        }
+        
+        .tag-get {
+            background: #059669;
+            color: white;
+            padding: 2px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        
+        .tag-post {
+            background: #2563eb;
+            color: white;
+            padding: 2px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        
+        .tag-put {
+            background: #d97706;
+            color: white;
+            padding: 2px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        
+        .tag-delete {
+            background: #dc2626;
+            color: white;
+            padding: 2px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        
+        .badge-200 {
+            background: rgba(5, 150, 105, 0.15);
+            color: #34d399;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .badge-404 {
+            background: rgba(220, 38, 38, 0.15);
+            color: #f87171;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .badge-500 {
+            background: rgba(217, 119, 6, 0.15);
+            color: #fbbf24;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .nav-link {
+            color: #9ca3af;
+            transition: all 0.2s ease;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .nav-link:hover {
+            color: #e8e8f0;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .nav-link.active {
+            color: #e8e8f0;
+            background: rgba(59, 130, 246, 0.15);
+        }
+        
+        .scroll-top {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1e1e2a;
+            border: 1px solid #3b82f6;
+            color: #e8e8f0;
+            width: 44px;
+            height: 44px;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .scroll-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .scroll-top:hover {
+            background: #3b82f6;
+            transform: scale(1.05);
+        }
+        
+        .response-preview {
+            background: #0d0d14;
+            border: 1px solid #2a2a35;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 12px;
+            color: #d4d4e0;
+            overflow-x: auto;
+        }
+        
+        .endpoint-card {
+            background: #14141c;
+            border: 1px solid #2a2a35;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .endpoint-card:hover {
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+        }
+        
+        .endpoint-card.featured {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #14141c, #1a1a2e);
+        }
+        
+        .stat-card {
+            background: #14141c;
+            border: 1px solid #2a2a35;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            border-color: #3b82f6;
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #14141c;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #2a2a35;
+            border-radius: 9999px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Scroll to Top -->
+    <div id="scrollTop" class="scroll-top">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+        </svg>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-dark border-b border-[#2a2a35]">
+        <div class="container mx-auto px-4 py-12">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v1m0 5v1m0-1c-1.11 0-2.08-.402-2.599-1M12 12v2m-4-8h-2a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V8a2 2 0 00-2-2h-2m-4 0h-4"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl md:text-3xl font-bold text-white glow">BCV Exchange API</h1>
+                            <p class="text-sm text-gray-400">v1.0.0 · Real-time rates from Banco Central de Venezuela</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-3 mt-4">
+                        <span class="flex items-center gap-2 text-xs text-gray-300 bg-[#1a1a2a] px-3 py-1.5 rounded-full border border-[#2a2a35]">
+                            <span class="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                            Online
+                        </span>
+                        <span class="flex items-center gap-2 text-xs text-gray-300 bg-[#1a1a2a] px-3 py-1.5 rounded-full border border-[#2a2a35]">
+                            <span class="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
+                            CORS Enabled
+                        </span>
+                        <span class="flex items-center gap-2 text-xs text-gray-300 bg-[#1a1a2a] px-3 py-1.5 rounded-full border border-[#2a2a35]">
+                            <span class="w-1.5 h-1.5 bg-purple-400 rounded-full"></span>
+                            Cache 5m
+                        </span>
+                    </div>
+                </div>
+                <div class="bg-[#14141c] border border-[#2a2a35] rounded-xl px-5 py-3 text-center min-w-[200px]">
+                    <div class="text-xs text-gray-500 uppercase tracking-wider">Base URL</div>
+                    <code class="text-sm text-blue-400 font-mono">http://localhost:5001/api/v1</code>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-[#0d0d14] border-b border-[#2a2a35] sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between overflow-x-auto py-3">
+                <div class="flex gap-1">
+                    <a href="#overview" class="nav-link active">Overview</a>
+                    <a href="#endpoints" class="nav-link">Endpoints</a>
+                    <a href="#examples" class="nav-link">Examples</a>
+                    <a href="#responses" class="nav-link">Responses</a>
+                    <a href="#changelog" class="nav-link">Changelog</a>
+                </div>
+                <div class="flex items-center gap-3 text-xs text-gray-500">
+                    <span>Status</span>
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                        <span class="text-green-400 font-medium">Operational</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main -->
+    <main class="container mx-auto px-4 py-12">
+
+        <!-- Stats -->
+        <section id="overview" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+            <div class="stat-card">
+                <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Endpoints</div>
+                <div class="text-3xl font-bold text-white mt-1">5</div>
+                <div class="text-xs text-gray-500 mt-1">RESTful API</div>
+            </div>
+            <div class="stat-card">
+                <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Cache</div>
+                <div class="text-3xl font-bold text-white mt-1">5m</div>
+                <div class="text-xs text-gray-500 mt-1">Auto-refresh</div>
+            </div>
+            <div class="stat-card">
+                <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Response</div>
+                <div class="text-3xl font-bold text-white mt-1">&lt;1s</div>
+                <div class="text-xs text-gray-500 mt-1">Average time</div>
+            </div>
+            <div class="stat-card">
+                <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Source</div>
+                <div class="text-3xl font-bold text-white mt-1">BCV</div>
+                <div class="text-xs text-gray-500 mt-1">Official rates</div>
+            </div>
+        </section>
+
+        <!-- Endpoints -->
+        <section id="endpoints" class="mb-16">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-1 h-8 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full"></div>
+                <h2 class="text-xl font-bold text-white">Endpoints</h2>
+            </div>
+
+            <div class="space-y-4">
+
+                <!-- Get All -->
+                <div class="endpoint-card featured p-6">
+                    <div class="flex flex-wrap items-center gap-3 mb-3">
+                        <span class="tag-get">GET</span>
+                        <code class="text-white font-mono text-lg">/tipo-cambio</code>
+                        <span class="badge-200">200 OK</span>
+                        <span class="text-xs text-gray-500 ml-auto">Recommended</span>
+                    </div>
+                    <p class="text-gray-300 text-sm mb-4">Get both USD and EUR exchange rates in a single request.</p>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Request</div>
+                            <div class="code-dark">
+                                <span class="text-emerald-400">GET</span> <span class="text-blue-400">http://localhost:5001/api/v1/tipo-cambio</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Response</div>
+                            <div class="response-preview">
+<pre>{
+  <span class="text-blue-400">"success"</span>: <span class="text-purple-400">true</span>,
+  <span class="text-blue-400">"version"</span>: <span class="text-emerald-400">"v1"</span>,
+  <span class="text-blue-400">"date"</span>: <span class="text-emerald-400">"Lunes, 27 Julio 2026"</span>,
+  <span class="text-blue-400">"prices"</span>: {
+    <span class="text-blue-400">"usd_bs"</span>: <span class="text-yellow-400">742.2292</span>,
+    <span class="text-blue-400">"eur_bs"</span>: <span class="text-yellow-400">844.21891437</span>
+  },
+  <span class="text-blue-400">"source"</span>: <span class="text-emerald-400">"Banco Central de Venezuela"</span>
+}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Get USD -->
+                <div class="endpoint-card p-6">
+                    <div class="flex flex-wrap items-center gap-3 mb-3">
+                        <span class="tag-get">GET</span>
+                        <code class="text-white font-mono text-lg">/dolar</code>
+                        <span class="badge-200">200 OK</span>
+                    </div>
+                    <p class="text-gray-300 text-sm mb-4">Get the current USD exchange rate.</p>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Request</div>
+                            <div class="code-dark">
+                                <span class="text-emerald-400">GET</span> <span class="text-blue-400">http://localhost:5001/api/v1/dolar</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Response</div>
+                            <div class="response-preview">
+<pre>{
+  <span class="text-blue-400">"success"</span>: <span class="text-purple-400">true</span>,
+  <span class="text-blue-400">"currency"</span>: <span class="text-emerald-400">"USD"</span>,
+  <span class="text-blue-400">"price_bs"</span>: <span class="text-yellow-400">742.2292</span>,
+  <span class="text-blue-400">"date"</span>: <span class="text-emerald-400">"Lunes, 27 Julio 2026"</span>
+}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Get EUR -->
+                <div class="endpoint-card p-6">
+                    <div class="flex flex-wrap items-center gap-3 mb-3">
+                        <span class="tag-get">GET</span>
+                        <code class="text-white font-mono text-lg">/euro</code>
+                        <span class="badge-200">200 OK</span>
+                    </div>
+                    <p class="text-gray-300 text-sm mb-4">Get the current EUR exchange rate.</p>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Request</div>
+                            <div class="code-dark">
+                                <span class="text-emerald-400">GET</span> <span class="text-blue-400">http://localhost:5001/api/v1/euro</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Response</div>
+                            <div class="response-preview">
+<pre>{
+  <span class="text-blue-400">"success"</span>: <span class="text-purple-400">true</span>,
+  <span class="text-blue-400">"currency"</span>: <span class="text-emerald-400">"EUR"</span>,
+  <span class="text-blue-400">"price_bs"</span>: <span class="text-yellow-400">844.21891437</span>,
+  <span class="text-blue-400">"date"</span>: <span class="text-emerald-400">"Lunes, 27 Julio 2026"</span>
+}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Historical -->
+                <div class="endpoint-card p-6">
+                    <div class="flex flex-wrap items-center gap-3 mb-3">
+                        <span class="tag-get">GET</span>
+                        <code class="text-white font-mono text-lg">/historico/dolar</code>
+                        <span class="badge-200">200 OK</span>
+                    </div>
+                    <p class="text-gray-300 text-sm mb-4">Get 30-day historical USD exchange rates.</p>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Request</div>
+                            <div class="code-dark">
+                                <span class="text-emerald-400">GET</span> <span class="text-blue-400">http://localhost:5001/api/v1/historico/dolar</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Response</div>
+                            <div class="response-preview">
+<pre>{
+  <span class="text-blue-400">"success"</span>: <span class="text-purple-400">true</span>,
+  <span class="text-blue-400">"historical"</span>: [
+    {<span class="text-blue-400">"date"</span>: <span class="text-emerald-400">"2026-07-27"</span>, <span class="text-blue-400">"price"</span>: <span class="text-yellow-400">742.22</span>}
+  ]
+}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Debug -->
+                <div class="endpoint-card p-6 border border-gray-700/30">
+                    <div class="flex flex-wrap items-center gap-3 mb-3">
+                        <span class="tag-get">GET</span>
+                        <code class="text-white font-mono text-lg">/debug</code>
+                        <span class="badge-200">200 OK</span>
+                        <span class="text-xs text-gray-500">Internal</span>
+                    </div>
+                    <p class="text-gray-300 text-sm mb-4">Debug endpoint showing all currencies found in the BCV HTML.</p>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Request</div>
+                            <div class="code-dark">
+                                <span class="text-emerald-400">GET</span> <span class="text-blue-400">http://localhost:5001/api/v1/debug</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Response</div>
+                            <div class="response-preview">
+<pre>{
+  <span class="text-blue-400">"currencies_by_id"</span>: {
+    <span class="text-blue-400">"dolar"</span>: <span class="text-yellow-400">742.2292</span>,
+    <span class="text-blue-400">"euro"</span>: <span class="text-yellow-400">844.2189</span>
+  }
+}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Examples -->
+        <section id="examples" class="mb-16">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-1 h-8 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full"></div>
+                <h2 class="text-xl font-bold text-white">Code Examples</h2>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+
+                <!-- JavaScript -->
+                <div class="bg-[#14141c] border border-[#2a2a35] rounded-xl p-5">
+                    <div class="flex items-center gap-2 mb-3">
+                        <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M0 0h24v24H0z" fill="none"/>
+                            <path d="M12 14.016V10.9q-.492-.633-.797-1.004-.305-.371-.82-.848.66.141 1.426.352.766.211 1.441.211 1.219 0 2.293-.527t1.77-1.477l1.898 1.969q-.914.977-2.18 1.523t-2.742.547zM6.73 17.574l1.922-1.957q.973.924 2.203 1.43t2.645.507q1.898 0 3.336-.91t2.219-2.5l1.934 1.922q-.996 1.793-2.738 2.832T11.5 20.02q-2.32 0-4.16-1.109t-2.61-3.336zm9.234-4.688q-1.098.879-2.52 1.34t-2.894.461q-1.863 0-3.426-.754t-2.684-2.094l1.922-1.957q.922.88 2.082 1.336t2.484.457q1.473 0 2.813-.629t2.242-1.734z"/>
+                        </svg>
+                        <span class="text-white font-medium">JavaScript</span>
+                    </div>
+                    <div class="code-dark text-sm">
+<pre><span class="keyword">fetch</span>(<span class="string">'http://localhost:5001/api/v1/dolar'</span>)
+  .<span class="keyword">then</span>(<span class="variable">res</span> => <span class="variable">res</span>.<span class="function">json</span>())
+  .<span class="keyword">then</span>(<span class="variable">data</span> => {
+    <span class="keyword">console</span>.<span class="function">log</span>(<span class="string">'USD:'</span>, <span class="variable">data</span>.<span class="variable">price_bs</span>);
+  })
+  .<span class="keyword">catch</span>(<span class="variable">error</span> => {
+    <span class="keyword">console</span>.<span class="function">error</span>(<span class="string">'Error:'</span>, <span class="variable">error</span>);
+  });</pre>
+                    </div>
+                </div>
+
+                <!-- Python -->
+                <div class="bg-[#14141c] border border-[#2a2a35] rounded-xl p-5">
+                    <div class="flex items-center gap-2 mb-3">
+                        <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M14.8 2.4c-.6-.2-1.2-.4-1.8-.4-2.6 0-4.6 1.4-4.6 3.8v1.4H4.6c-2.4 0-3.8 1.6-3.8 4.2 0 2.6 2.2 4.2 4.6 4.2h1.8v-2.2c0-2.6 2.4-4.6 5-4.6h3.8V5.8c0-2.4-1.8-3.4-4.2-3.4zM9.2 4.2c.8 0 1.4.6 1.4 1.4s-.6 1.4-1.4 1.4-1.4-.6-1.4-1.4.6-1.4 1.4-1.4z"/>
+                            <path d="M20.4 6.6h-1.8v2.2c0 2.6-2.4 4.6-5 4.6H9.8v2c0 2.4 1.8 3.4 4.2 3.4.6 0 1.2-.2 1.8-.4 1.8-.6 3-2 3-4.2v-1.4h3.8c2.4 0 3.8-1.6 3.8-4.2 0-2.6-2.2-4.2-4.6-4.2zM14.8 19.8c-.8 0-1.4-.6-1.4-1.4s.6-1.4 1.4-1.4 1.4.6 1.4 1.4-.6 1.4-1.4 1.4z"/>
+                        </svg>
+                        <span class="text-white font-medium">Python</span>
+                    </div>
+                    <div class="code-dark text-sm">
+<pre><span class="keyword">import</span> requests
+
+<span class="keyword">try</span>:
+    <span class="variable">response</span> = requests.<span class="function">get</span>(<span class="string">'http://localhost:5001/api/v1/dolar'</span>)
+    <span class="variable">data</span> = <span class="variable">response</span>.<span class="function">json</span>()
+    <span class="keyword">print</span>(<span class="string">f"USD: {data['price_bs']}"</span>)
+<span class="keyword">except</span> Exception <span class="keyword">as</span> <span class="variable">e</span>:
+    <span class="keyword">print</span>(<span class="string">f"Error: {e}"</span>)</pre>
+                    </div>
+                </div>
+
+                <!-- cURL -->
+                <div class="bg-[#14141c] border border-[#2a2a35] rounded-xl p-5">
+                    <div class="flex items-center gap-2 mb-3">
+                        <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                        </svg>
+                        <span class="text-white font-medium">cURL</span>
+                    </div>
+                    <div class="code-dark text-sm">
+<pre>curl <span class="string">-X GET</span> \
+  <span class="string">-H "Accept: application/json"</span> \
+  <span class="string">http://localhost:5001/api/v1/dolar</span></pre>
+                    </div>
+                </div>
+
+                <!-- PHP -->
+                <div class="bg-[#14141c] border border-[#2a2a35] rounded-xl p-5">
+                    <div class="flex items-center gap-2 mb-3">
+                        <svg class="w-5 h-5 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                        </svg>
+                        <span class="text-white font-medium">PHP</span>
+                    </div>
+                    <div class="code-dark text-sm">
+<pre><span class="keyword">&lt;?php</span>
+<span class="variable">$ch</span> = curl_init(<span class="string">'http://localhost:5001/api/v1/dolar'</span>);
+curl_setopt(<span class="variable">$ch</span>, CURLOPT_RETURNTRANSFER, <span class="keyword">true</span>);
+<span class="variable">$response</span> = curl_exec(<span class="variable">$ch</span>);
+<span class="variable">$data</span> = json_decode(<span class="variable">$response</span>, <span class="keyword">true</span>);
+<span class="keyword">echo</span> <span class="string">"USD: "</span> . <span class="variable">$data</span>[<span class="string">'price_bs'</span>];
+curl_close(<span class="variable">$ch</span>);
+<span class="keyword">?&gt;</span></pre>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Responses -->
+        <section id="responses" class="mb-16">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-1 h-8 bg-gradient-to-b from-orange-500 to-yellow-500 rounded-full"></div>
+                <h2 class="text-xl font-bold text-white">Response Codes</h2>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="bg-[#14141c] border border-green-800/30 rounded-xl p-5">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl font-bold text-green-400">200</span>
+                        <span class="badge-200">OK</span>
+                    </div>
+                    <p class="text-gray-300 text-sm mt-2">Request successful. Data returned correctly.</p>
+                </div>
+
+                <div class="bg-[#14141c] border border-red-800/30 rounded-xl p-5">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl font-bold text-red-400">404</span>
+                        <span class="badge-404">Not Found</span>
+                    </div>
+                    <p class="text-gray-300 text-sm mt-2">Endpoint not found or data unavailable.</p>
+                </div>
+
+                <div class="bg-[#14141c] border border-yellow-800/30 rounded-xl p-5">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl font-bold text-yellow-400">500</span>
+                        <span class="badge-500">Error</span>
+                    </div>
+                    <p class="text-gray-300 text-sm mt-2">Internal server error. Try again later.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Changelog -->
+        <section id="changelog">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-1 h-8 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full"></div>
+                <h2 class="text-xl font-bold text-white">Changelog</h2>
+            </div>
+
+            <div class="bg-[#14141c] border border-[#2a2a35] rounded-xl p-6">
+                <div class="flex gap-4">
+                    <div class="flex flex-col items-center">
+                        <div class="w-2.5 h-2.5 bg-blue-500 rounded-full mt-1.5"></div>
+                        <div class="w-px h-full bg-[#2a2a35]"></div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <span class="font-bold text-white">v1.0.0</span>
+                            <span class="text-xs text-gray-500">25 July 2026</span>
+                            <span class="badge-200">Stable</span>
+                        </div>
+                        <p class="text-gray-300 text-sm mt-1">Initial release with support for USD and EUR official rates.</p>
+                        <ul class="text-xs text-gray-500 mt-2 space-y-1">
+                            <li>• GET /tipo-cambio — All rates</li>
+                            <li>• GET /dolar — USD only</li>
+                            <li>• GET /euro — EUR only</li>
+                            <li>• GET /historico/dolar — Historical data</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="mt-16 pt-6 border-t border-[#2a2a35]">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-sm">
+                <span class="text-gray-500">BCV Exchange API v1.0.0</span>
+                <span class="text-gray-500">
+                    Data sourced from <a href="https://www.bcv.org.ve" target="_blank" class="text-blue-400 hover:underline">Banco Central de Venezuela</a>
+                </span>
+                <div class="flex items-center gap-4 text-gray-500">
+                    <span>Node.js</span>
+                    <span>·</span>
+                    <span>Express</span>
+                    <span>·</span>
+                    <span>Tailwind</span>
+                </div>
+            </div>
+        </footer>
+
+    </main>
+
+    <script>
+        // Scroll to top
+        const scrollBtn = document.getElementById('scrollTop');
+        window.addEventListener('scroll', () => {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Navigation
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = document.querySelector(link.getAttribute('href'));
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            });
+        });
+    </script>
+
+</body>
+</html>
