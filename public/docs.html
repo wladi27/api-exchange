@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentación OpenAPI 3.1 · Dolar API & BCV Exchange SaaS</title>
+  <meta name="description" content="Documentación interactiva de la API comercial de tasas de cambio oficial BCV de Venezuela, conversión de monedas y administración.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      background-color: #0d1117;
+      color: #f0f6fc;
+      margin: 0;
+      padding: 0;
+    }
+    .custom-docs-navbar {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-glass);
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <header class="custom-docs-navbar">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <a href="/" class="brand-logo">
+        <div class="logo-icon">💵</div>
+        <span>Dolar<span style="color: var(--brand-primary);">API</span></span>
+      </a>
+      <span class="badge badge-live"><span class="pulse-dot"></span> OpenAPI 3.1 Live</span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <a href="/" class="nav-link">Inicio</a>
+      <a href="/dashboard" class="nav-link">📊 Mi Dashboard</a>
+      <a href="/docs/openapi.json" target="_blank" class="btn btn-secondary btn-sm">📋 JSON Spec</a>
+      <div id="nav-user-actions">
+        <!-- Rellenado por api.js -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Scalar API Reference Sandbox Container -->
+  <div id="api-reference" data-url="/docs/openapi.json"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  <script src="/js/api.js"></script>
+  <script>
+    document.getElementById('api-reference').setAttribute('data-configuration', JSON.stringify({
+      theme: 'deepSpace',
+      layout: 'modern',
+      showSidebar: true,
+      searchHotKey: 'k',
+      metaData: {
+        title: 'Dolar API · Documentación Oficial',
+        description: 'Documentación interactiva de la API comercial de tipo de cambio BCV'
+      },
+      defaultHttpClient: {
+        targetKey: 'js',
+        clientKey: 'fetch'
+      }
+    }));
+  </script>
+</body>
+</html>

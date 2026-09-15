@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard del Desarrollador · Dolar API SaaS</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .dashboard-header {
+      padding: 40px 0 20px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 36px;
+    }
+    .stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-md);
+      padding: 20px;
+    }
+    .stat-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      font-family: var(--font-display);
+      color: #ffffff;
+      margin: 8px 0;
+    }
+    .progress-bar-container {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 9999px;
+      height: 8px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--brand-gradient);
+      border-radius: 9999px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+    .tabs-nav {
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-glass);
+      margin-bottom: 28px;
+      padding-bottom: 8px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 15px;
+      font-weight: 600;
+      padding: 10px 18px;
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--brand-primary);
+    }
+    .section-content {
+      display: none;
+    }
+    .section-content.active {
+      display: block;
+    }
+    .payment-instructions-box {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="glow-orb-1"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container nav-wrapper">
+      <a href="/" class="brand-logo">
+        <div class="logo-icon">💵</div>
+        <span>Dolar<span style="color: var(--brand-primary);">API</span></span>
+      </a>
+
+      <div class="nav-actions" id="nav-user-actions">
+        <!-- Rellenado por api.js -->
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="dashboard-header">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <h1 style="font-family: var(--font-display); font-size: 28px; font-weight: 800;" id="user-greeting">
+            Panel de Desarrollador
+          </h1>
+          <p style="color: var(--text-secondary); font-size: 14px;" id="user-email-display">
+            Gestiona tus API Keys, monitorea tu consumo y administra tus suscripciones.
+          </p>
+        </div>
+        <button onclick="openModal('create-key-modal')" class="btn btn-primary">
+          ➕ Generar Nueva API Key
+        </button>
+      </div>
+    </header>
+
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-title">Plan Actual</div>
+        <div class="stat-value" id="stat-plan" style="color: #60a5fa;">FREE</div>
+        <div style="font-size: 12px; color: var(--text-muted);" id="stat-expiry">Suscripción Ilimitada (Free)</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-title">Consumo Mensual de API</div>
+        <div class="stat-value" id="stat-usage">0 <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">/ 1,000 req</span></div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="stat-progress" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-title">Límite de Velocidad</div>
+        <div class="stat-value" id="stat-rate-limit">30 <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">req / min</span></div>
+        <div style="font-size: 12px; color: var(--accent-green);">⚡ Latencia Promedio: &lt; 8ms</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-title">API Keys Activas</div>
+        <div class="stat-value" id="stat-keys-count">0</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Seguridad SHA-256 Hashed</div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" onclick="switchDashboardTab('keys-tab', this)">🔑 Mis API Keys</button>
+      <button class="tab-btn" onclick="switchDashboardTab('payments-tab', this)">💳 Suscripción & Pagos (Pago Móvil / Binance)</button>
+      <button class="tab-btn" onclick="switchDashboardTab('history-tab', this)">📋 Historial de Pagos</button>
+    </div>
+
+    <!-- Section 1: API Keys -->
+    <div id="keys-tab" class="section-content active">
+      <div class="glass-panel" style="padding: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2 style="font-size: 18px; font-weight: 700;">Credenciales de Acceso a la API</h2>
+          <span style="font-size: 13px; color: var(--text-muted);">Incluye la clave en la cabecera <code>X-Api-Key</code></span>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Entorno</th>
+                <th>API Key (Enmascarada)</th>
+                <th>Plan & Límite</th>
+                <th>Uso Mensual</th>
+                <th>Último Uso</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="keys-table-body">
+              <tr>
+                <td colspan="8" style="text-align: center; padding: 30px;">Cargando claves...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Payments & Subscriptions -->
+    <div id="payments-tab" class="section-content">
+      <div class="glass-panel" style="padding: 28px;">
+        <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 12px;">Reportar Pago de Suscripción</h2>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 24px;">
+          Paga fácilmente con <strong>Pago Móvil</strong> en Bolívares o mediante <strong>Binance Pay / USDT</strong>. Tu plan se activará tan pronto como sea validado por el administrador.
+        </p>
+
+        <!-- Payment Instructions Box -->
+        <div class="payment-instructions-box" id="payment-methods-box">
+          <h3 style="font-size: 16px; font-weight: 700; color: #60a5fa; margin-bottom: 14px;">
+            🏦 Datos de Cuenta para Transferencias
+          </h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;" id="methods-details-grid">
+            Cargando métodos de pago...
+          </div>
+        </div>
+
+        <!-- Payment Report Form -->
+        <form id="payment-report-form" onsubmit="handlePaymentReportSubmit(event)" enctype="multipart/form-data">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+            <div class="form-group">
+              <label class="form-label">Plan a Contratar</label>
+              <select id="pay-plan" class="form-control form-select" onchange="updatePriceCalculation()" required>
+                <option value="starter">Starter — $9 / mes (50,000 req)</option>
+                <option value="pro" selected>Pro / Business — $29 / mes (500,000 req)</option>
+                <option value="enterprise">Enterprise — $99 / mes (5,000,000 req)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Duración</label>
+              <select id="pay-duration" class="form-control form-select" onchange="updatePriceCalculation()" required>
+                <option value="1">1 Mes</option>
+                <option value="3">3 Meses</option>
+                <option value="6">6 Meses</option>
+                <option value="12">1 Año (12 Meses)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Método de Pago Utilizado</label>
+              <select id="pay-method" class="form-control form-select" required>
+                <option value="pago_movil">Pago Móvil (Bolívares)</option>
+                <option value="binance_pay">Binance Pay (USDT)</option>
+                <option value="usdt_trc20">USDT (Red TRC-20)</option>
+                <option value="usdt_bep20">USDT (Red BEP-20)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+            <div class="form-group">
+              <label class="form-label">Número de Referencia o Hash TxID</label>
+              <input type="text" id="pay-reference" class="form-control" placeholder="Ej. 0984812 o Hash de Binance" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Monto Exacto Pagado</label>
+              <input type="number" step="0.01" id="pay-amount" class="form-control" placeholder="Ej. 29.00 o equivalente en Bs" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Comprobante de Pago (JPG, PNG o PDF)</label>
+              <input type="file" id="pay-receipt" class="form-control" accept="image/*,.pdf" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg" id="btn-submit-payment" style="margin-top: 12px;">
+            📤 Enviar Comprobante para Validación
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Section 3: Payment History -->
+    <div id="history-tab" class="section-content">
+      <div class="glass-panel" style="padding: 24px;">
+        <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 20px;">Historial de Pagos y Facturación</h2>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Plan</th>
+                <th>Duración</th>
+                <th>Método</th>
+                <th>Referencia</th>
+                <th>Monto</th>
+                <th>Estado</th>
+                <th>Notas del Admin</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body">
+              <tr>
+                <td colspan="8" style="text-align: center; padding: 30px;">Cargando historial...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal: Create Key -->
+  <div class="modal-backdrop" id="create-key-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Generar Nueva API Key</h3>
+        <button class="modal-close" onclick="closeModal('create-key-modal')">✕</button>
+      </div>
+      <form id="create-key-form" onsubmit="handleCreateKeySubmit(event)">
+        <div class="form-group">
+          <label class="form-label">Nombre de la Clave</label>
+          <input type="text" id="new-key-name" class="form-control" placeholder="Ej. Servidor Node Producción" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Entorno</label>
+          <select id="new-key-env" class="form-control form-select">
+            <option value="live">Producción (Live - bcv_live_...)</option>
+            <option value="test">Pruebas (Test - bcv_test_...)</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Generar API Key</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Display Raw Key (Shown Once) -->
+  <div class="modal-backdrop" id="raw-key-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">¡API Key Generada con Éxito!</h3>
+        <button class="modal-close" onclick="closeModal('raw-key-modal'); loadDashboard();">✕</button>
+      </div>
+      <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 20px; font-size: 13px; color: #fca5a5;">
+        ⚠️ <strong>Atención:</strong> Esta es la única vez que podrás ver tu clave completa. Guárdala en tus variables de entorno (.env) de forma segura.
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tu API Key:</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="raw-key-display" class="form-control" style="font-family: var(--font-mono); font-size: 13px;" readonly>
+          <button onclick="copyRawKey()" class="btn btn-primary">Copiar</button>
+        </div>
+      </div>
+      <button onclick="closeModal('raw-key-modal'); loadDashboard();" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">Entendido y Guardada</button>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    if (!Auth.isAuthenticated()) {
+      window.location.href = '/';
+    }
+
+    let globalPaymentMethods = [];
+    let globalExchangeRate = null;
+
+    function switchDashboardTab(tabId, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.section-content').forEach(s => s.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+
+      if (tabId === 'history-tab') {
+        loadPaymentHistory();
+      }
+    }
+
+    async function loadDashboard() {
+      try {
+        const profile = await apiRequest('/api/v1/auth/me');
+        const user = profile.user;
+
+        document.getElementById('user-greeting').innerText = `Hola, ${user.name}`;
+        document.getElementById('user-email-display').innerText = `${user.email} · Rol: ${user.role.toUpperCase()}`;
+        document.getElementById('stat-plan').innerText = user.plan.toUpperCase();
+        
+        if (user.subscriptionExpiresAt) {
+          const exp = new Date(user.subscriptionExpiresAt).toLocaleDateString();
+          document.getElementById('stat-expiry').innerText = `Vence el: ${exp}`;
+        } else {
+          document.getElementById('stat-expiry').innerText = 'Plan Gratuito Activo';
+        }
+
+        // Cargar keys
+        const keysData = await apiRequest('/api/v1/user/keys');
+        renderKeysTable(keysData.keys);
+
+        // Actualizar métricas acumuladas
+        let totalUsage = 0;
+        let quota = 1000;
+        let rateLimit = 30;
+
+        if (keysData.keys.length > 0) {
+          totalUsage = keysData.keys.reduce((sum, k) => sum + k.currentMonthUsage, 0);
+          quota = keysData.keys[0].monthlyQuota;
+          rateLimit = keysData.keys[0].rateLimitPerMin;
+        }
+
+        document.getElementById('stat-usage').innerHTML = `${totalUsage.toLocaleString()} <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">/ ${quota.toLocaleString()} req</span>`;
+        const percent = Math.min(100, Math.round((totalUsage / quota) * 100));
+        document.getElementById('stat-progress').style.width = `${percent}%`;
+        document.getElementById('stat-rate-limit').innerHTML = `${rateLimit} <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">req / min</span>`;
+        document.getElementById('stat-keys-count').innerText = keysData.keys.length;
+
+        // Cargar métodos de pago
+        loadPaymentMethods();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    function renderKeysTable(keys) {
+      const tbody = document.getElementById('keys-table-body');
+      if (!keys || keys.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 24px; color: var(--text-muted);">No tienes API Keys creadas todavía. Haz clic en "Generar Nueva API Key".</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = keys.map(k => `
+        <tr>
+          <td><strong style="color: var(--text-primary);">${k.name}</strong></td>
+          <td><span class="badge ${k.environment === 'live' ? 'badge-live' : 'badge-test'}">${k.environment.toUpperCase()}</span></td>
+          <td><code style="font-family: var(--font-mono); font-size: 12px; color: #93c5fd;">${k.maskedKey}</code></td>
+          <td>${k.rateLimitPerMin} req/min</td>
+          <td>${k.currentMonthUsage.toLocaleString()} / ${k.monthlyQuota.toLocaleString()}</td>
+          <td>${k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleString() : 'Nunca'}</td>
+          <td><span class="badge ${k.active ? 'badge-approved' : 'badge-rejected'}">${k.active ? 'Activa' : 'Inactiva'}</span></td>
+          <td>
+            <div style="display: flex; gap: 6px;">
+              <button onclick="handleRotateKey('${k.id}')" class="btn btn-secondary btn-sm" title="Rotar Clave">🔄</button>
+              <button onclick="handleRevokeKey('${k.id}')" class="btn btn-danger btn-sm" title="Eliminar Clave">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function handleCreateKeySubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('new-key-name').value;
+      const environment = document.getElementById('new-key-env').value;
+
+      try {
+        const res = await apiRequest('/api/v1/user/keys', {
+          method: 'POST',
+          body: JSON.stringify({ name, environment })
+        });
+        closeModal('create-key-modal');
+        document.getElementById('raw-key-display').value = res.apiKey.rawKey;
+        openModal('raw-key-modal');
+        showToast('API Key creada exitosamente', 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    function copyRawKey() {
+      const key = document.getElementById('raw-key-display').value;
+      navigator.clipboard.writeText(key);
+      showToast('API Key copiada al portapapeles', 'success');
+    }
+
+    async function handleRotateKey(keyId) {
+      if (!confirm('¿Estás seguro de rotar esta API Key? La clave anterior dejará de funcionar de inmediato.')) return;
+      try {
+        const res = await apiRequest(`/api/v1/user/keys/${keyId}/rotate`, { method: 'POST' });
+        document.getElementById('raw-key-display').value = res.apiKey.rawKey;
+        openModal('raw-key-modal');
+        showToast('API Key rotada exitosamente', 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function handleRevokeKey(keyId) {
+      if (!confirm('¿Estás seguro de eliminar permanentemente esta API Key?')) return;
+      try {
+        await apiRequest(`/api/v1/user/keys/${keyId}`, { method: 'DELETE' });
+        showToast('API Key eliminada', 'info');
+        loadDashboard();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function loadPaymentMethods() {
+      try {
+        const data = await apiRequest('/api/v1/billing/payment-methods');
+        globalPaymentMethods = data.paymentMethods;
+        globalExchangeRate = data.currentExchangeRate;
+
+        const container = document.getElementById('methods-details-grid');
+        container.innerHTML = data.paymentMethods.map(m => {
+          let extra = '';
+          if (m.id === 'pago_movil') {
+            extra = `<strong>Banco:</strong> ${m.bank}<br><strong>Teléfono:</strong> ${m.phone}<br><strong>Cédula/RIF:</strong> ${m.idNumber}`;
+          } else if (m.id === 'binance_pay') {
+            extra = `<strong>Binance ID:</strong> ${m.binanceId}<br><strong>Email:</strong> ${m.binanceEmail}`;
+          } else if (m.address) {
+            extra = `<strong style="word-break: break-all;">Billetera:</strong> <code>${m.address}</code>`;
+          }
+          return `
+            <div style="background: rgba(30, 41, 59, 0.6); padding: 16px; border-radius: 8px; border: 1px solid var(--border-glass);">
+              <h4 style="color: #ffffff; margin-bottom: 6px; font-size: 14px;">${m.name}</h4>
+              <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">${extra}</p>
+            </div>
+          `;
+        }).join('');
+
+        updatePriceCalculation();
+      } catch (err) {
+        console.error('Error cargando métodos de pago:', err);
+      }
+    }
+
+    function updatePriceCalculation() {
+      const plan = document.getElementById('pay-plan').value;
+      const duration = parseInt(document.getElementById('pay-duration').value) || 1;
+      const prices = { starter: 9, pro: 29, enterprise: 99 };
+      const totalUsd = prices[plan] * duration;
+
+      if (globalExchangeRate) {
+        const totalBs = Math.round(totalUsd * globalExchangeRate.usd_bs * 100) / 100;
+        document.getElementById('pay-amount').value = totalUsd;
+        document.getElementById('pay-amount').placeholder = `Total: $${totalUsd} USD (~${totalBs} Bs.)`;
+      } else {
+        document.getElementById('pay-amount').value = totalUsd;
+      }
+    }
+
+    async function handlePaymentReportSubmit(e) {
+      e.preventDefault();
+      const plan = document.getElementById('pay-plan').value;
+      const durationMonths = document.getElementById('pay-duration').value;
+      const paymentMethod = document.getElementById('pay-method').value;
+      const referenceNumber = document.getElementById('pay-reference').value;
+      const amountPaid = document.getElementById('pay-amount').value;
+      const receiptFile = document.getElementById('pay-receipt').files[0];
+
+      if (!receiptFile) {
+        showToast('Debe seleccionar un archivo de comprobante', 'error');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('plan', plan);
+      formData.append('durationMonths', durationMonths);
+      formData.append('paymentMethod', paymentMethod);
+      formData.append('referenceNumber', referenceNumber);
+      formData.append('amountPaid', amountPaid);
+      formData.append('receipt', receiptFile);
+
+      const btn = document.getElementById('btn-submit-payment');
+      btn.disabled = true;
+      btn.innerText = 'Enviando comprobante...';
+
+      try {
+        await apiRequest('/api/v1/billing/report-payment', {
+          method: 'POST',
+          body: formData
+        });
+        showToast('Comprobante enviado exitosamente. En revisión por el administrador.', 'success');
+        document.getElementById('payment-report-form').reset();
+        switchDashboardTab('history-tab', document.querySelectorAll('.tab-btn')[2]);
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '📤 Enviar Comprobante para Validación';
+      }
+    }
+
+    async function loadPaymentHistory() {
+      try {
+        const data = await apiRequest('/api/v1/billing/my-payments');
+        const tbody = document.getElementById('history-table-body');
+        if (!data.payments || data.payments.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 24px; color: var(--text-muted);">No has realizado reportes de pago aún.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data.payments.map(p => `
+          <tr>
+            <td>${new Date(p.createdAt).toLocaleDateString()}</td>
+            <td><strong style="text-transform: uppercase;">${p.plan}</strong></td>
+            <td>${p.durationMonths || 1} Mes(es)</td>
+            <td>${p.paymentMethod}</td>
+            <td><code>${p.referenceNumber}</code></td>
+            <td><strong>${p.amountPaid} ${p.currency}</strong></td>
+            <td>
+              <span class="badge ${p.status === 'approved' ? 'badge-approved' : p.status === 'rejected' ? 'badge-rejected' : 'badge-pending'}">
+                ${p.status === 'approved' ? 'Aprobado ✅' : p.status === 'rejected' ? 'Rechazado ❌' : 'En Revisión ⏳'}
+              </span>
+            </td>
+            <td>${p.adminNotes || '—'}</td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadDashboard();
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('subscribe')) {
+        switchDashboardTab('payments-tab', document.querySelectorAll('.tab-btn')[1]);
+        document.getElementById('pay-plan').value = urlParams.get('subscribe');
+        updatePriceCalculation();
+      }
+    });
+  </script>
+</body>
+</html>

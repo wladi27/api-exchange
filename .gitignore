@@ -232,3 +232,4 @@ docker-compose.override.yml
 .secrets/
 secrets/
 credentials/
+api-keys.json

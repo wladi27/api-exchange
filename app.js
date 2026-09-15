@@ -1,251 +1,168 @@
+require('dotenv').config();
 const express = require('express');
-const axios = require('axios');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
+const fs = require('fs');
+const { connectDB } = require('./src/config/db');
+const { startCronJobs } = require('./src/services/cronService');
+
+// Importar rutas de la API
+const authRoutes = require('./src/routes/authRoutes');
+const keyRoutes = require('./src/routes/keyRoutes');
+const billingRoutes = require('./src/routes/billingRoutes');
+const adminRoutes = require('./src/routes/adminRoutes');
+const exchangeRoutes = require('./src/routes/exchangeRoutes');
+const accountRoutes = require('./src/routes/accountRoutes');
+
 const app = express();
+const PORT = process.env.PORT || 3003;
 
-// Habilitar CORS
+// ==========================================
+// SEGURIDAD PROFESIONAL (HARDENING)
+// ==========================================
+
+// 1. Headers de seguridad HTTP con Helmet (configurado para permitir CDN y Swagger)
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Permitir visualización de scripts en Docs y Dashboards
+    crossOriginEmbedderPolicy: false
+  })
+);
+
+// 2. CORS restringido y configurable
 app.use(cors());
-app.use(express.json());
 
-const PORT = 5001;
+// 3. Rate limiting estricto para prevenir fuerza bruta en Auth
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 30, // 30 intentos por IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: 'TooManyRequests',
+    message: 'Demasiados intentos de acceso desde esta IP. Por favor intente más tarde.'
+  }
+});
 
-// Cache configuration
-let cache = {
-    data: null,
-    timestamp: 0
-};
-const CACHE_DURATION = 300000; // 5 minutes
+// 4. Parsing con límites de carga seguros
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
-// Function to fetch prices from BCV
-async function getBcvPrices() {
-    const now = Date.now();
+// Servir archivos estáticos del frontend (CSS, JS, imágenes)
+app.use(express.static(path.join(__dirname, 'public')));
 
-    if (cache.data && (now - cache.timestamp) < CACHE_DURATION) {
-        console.log('Using cached data');
-        return cache.data;
-    }
+// Servir carpeta de comprobantes de pago subidos
+const uploadsDir = process.env.VERCEL
+  ? path.join('/tmp', 'uploads')
+  : path.join(__dirname, 'uploads');
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+} catch (e) {
+  // Ignorar en entornos de solo lectura
+}
+app.use('/uploads', express.static(uploadsDir));
 
-    console.log('Connecting to BCV...');
+// Servir especificación OpenAPI 3.1
+app.get('/docs/openapi.json', (req, res) => {
+  res.sendFile(path.join(__dirname, 'docs', 'openapi.json'));
+});
 
-    try {
-        const response = await axios.get('https://www.bcv.org.ve/', {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9',
-                'Accept-Language': 'es-ES,es;q=0.8'
-            },
-            timeout: 10000,
-            httpsAgent: new (require('https').Agent)({
-                rejectUnauthorized: false
-            })
-        });
+// Middleware para asegurar conexión a MongoDB en entornos Serverless (Vercel)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+  } catch (err) {
+    console.warn('⚠️ Warning conectando a MongoDB en middleware:', err.message);
+  }
+  next();
+});
 
-        const html = response.data;
+// ==========================================
+// RUTAS VISUALES DEL FRONTEND (UI)
+// ==========================================
 
-        // Extract all currencies
-        const currencyPattern = /id="([a-z]+)"[^>]*>.*?<strong[^>]*>([\d.,]+)<\/strong>/gs;
-        const currencies = {};
-        let match;
+// 1. Landing Page Comercial
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
-        while ((match = currencyPattern.exec(html)) !== null) {
-            const currency = match[1];
-            const value = match[2].replace(/\./g, '').replace(/,/g, '.');
-            currencies[currency] = parseFloat(value);
-        }
+// 2. Documentación Interactiva OpenAPI 3.1
+app.get('/docs', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'docs.html'));
+});
 
-        console.log('Currencies found:', currencies);
+// 3. Dashboard del Desarrollador (Gestión de Keys y Pagos)
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
 
-        // Get USD
-        let usd = currencies['dolar'] || null;
-        if (!usd) {
-            const usdIndex = html.indexOf('USD');
-            if (usdIndex !== -1) {
-                const section = html.substring(usdIndex, usdIndex + 300);
-                const numbers = section.match(/([\d.,]+)/g);
-                if (numbers) {
-                    for (const num of numbers) {
-                        const cleanNum = num.replace(/\./g, '').replace(/,/g, '.');
-                        if (parseFloat(cleanNum) > 100) {
-                            usd = parseFloat(cleanNum);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+// 4. Panel de Administración (Validación de Pagos y Métricas)
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
 
-        // Get EUR
-        let eur = null;
-        if (currencies['euro'] && currencies['euro'] > 100) {
-            eur = currencies['euro'];
-        } else {
-            const eurIndex = html.indexOf('EUR');
-            if (eurIndex !== -1) {
-                const section = html.substring(eurIndex, eurIndex + 300);
-                const numbers = section.match(/([\d.,]+)/g);
-                if (numbers) {
-                    for (const num of numbers) {
-                        const cleanNum = num.replace(/\./g, '').replace(/,/g, '.');
-                        if (parseFloat(cleanNum) > 100) {
-                            eur = parseFloat(cleanNum);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+// ==========================================
+// ENDPOINTS REST API
+// ==========================================
+app.use('/api/v1/auth', authLimiter, authRoutes);
+app.use('/api/v1/accounts', accountRoutes);
+app.use('/api/v1/user/keys', keyRoutes);
+app.use('/api/v1/billing', billingRoutes);
+app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1', exchangeRoutes);
 
-        // Get date
-        let date = null;
-        const dateMatch = html.match(/Fecha Valor:.*?<span[^>]*>([^<]+)<\/span>/);
-        if (dateMatch) {
-            date = dateMatch[1].trim();
-        } else {
-            const dateMatch2 = html.match(/Fecha Valor:\s*([^<]+)/);
-            if (dateMatch2) {
-                date = dateMatch2[1].trim();
-            }
-        }
+// Manejo de rutas no encontradas (404)
+app.use((req, res) => {
+  if (req.accepts('html')) {
+    return res.status(404).sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
+  res.status(404).json({
+    success: false,
+    error: 'NotFound',
+    message: `Ruta ${req.method} ${req.originalUrl} no encontrada.`,
+    documentation: '/docs'
+  });
+});
 
-        const result = { usd, eur, date };
+// Manejo global de errores (500)
+app.use((err, req, res, next) => {
+  console.error('❌ Error capturado:', err);
+  res.status(err.status || 500).json({
+    success: false,
+    error: err.name || 'InternalServerError',
+    message: err.message || 'Ha ocurrido un error interno en el servidor.'
+  });
+});
 
-        // Update cache
-        cache.data = result;
-        cache.timestamp = now;
+// Iniciar servidor y servicios
+async function startServer() {
+  await connectDB();
+  if (!process.env.VERCEL) {
+    startCronJobs();
+  }
 
-        console.log(`Data updated: USD=${usd}, EUR=${eur}`);
-        return result;
-
-    } catch (error) {
-        console.error('Error:', error.message);
-        if (cache.data) {
-            console.log('Using expired cache due to error');
-            return cache.data;
-        }
-        return { usd: null, eur: null, date: null };
-    }
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log('='.repeat(60));
+    console.log('🚀 DOLAR API & BCV EXCHANGE RATES SAAS ACTIVO (MODO SEGURO)');
+    console.log('='.repeat(60));
+    console.log(`🌐 Landing Page:      http://localhost:${PORT}/`);
+    console.log(`📖 Documentación:     http://localhost:${PORT}/docs`);
+    console.log(`📊 Panel Desarrollador: http://localhost:${PORT}/dashboard`);
+    console.log(`🛡️ Panel Admin:        http://localhost:${PORT}/admin`);
+    console.log(`🏦 Cuentas Bancarias: http://localhost:${PORT}/api/v1/accounts`);
+    console.log(`📋 OpenAPI Spec:      http://localhost:${PORT}/docs/openapi.json`);
+    console.log(`💵 Endpoint Tasas:    http://localhost:${PORT}/api/v1/tipo-cambio`);
+    console.log('='.repeat(60));
+  });
 }
 
-// API Routes - Version 1
-app.get('/api/v1/tipo-cambio', async (req, res) => {
-    console.log('Request received to /api/v1/tipo-cambio');
-    const { usd, eur, date } = await getBcvPrices();
+module.exports = app;
 
-    if (usd === null || eur === null) {
-        return res.status(404).json({
-            success: false,
-            message: 'Unable to fetch data from BCV',
-            error: 'Currency values not found'
-        });
-    }
-
-    res.json({
-        success: true,
-        version: 'v1',
-        date: date,
-        prices: {
-            usd_bs: usd,
-            eur_bs: eur
-        },
-        source: 'Banco Central de Venezuela',
-        base_currency: 'Bolivar (Bs.)'
-    });
-});
-
-app.get('/api/v1/dolar', async (req, res) => {
-    const { usd } = await getBcvPrices();
-
-    if (usd === null) {
-        return res.status(404).json({
-            success: false,
-            message: 'USD value not found'
-        });
-    }
-
-    res.json({
-        success: true,
-        version: 'v1',
-        currency: 'USD',
-        price_bs: usd,
-        base_currency: 'Bolivar (Bs.)'
-    });
-});
-
-app.get('/api/v1/euro', async (req, res) => {
-    const { eur } = await getBcvPrices();
-
-    if (eur === null) {
-        return res.status(404).json({
-            success: false,
-            message: 'EUR value not found'
-        });
-    }
-
-    res.json({
-        success: true,
-        version: 'v1',
-        currency: 'EUR',
-        price_bs: eur,
-        base_currency: 'Bolivar (Bs.)'
-    });
-});
-
-app.get('/api/v1/debug', async (req, res) => {
-    try {
-        const response = await axios.get('https://www.bcv.org.ve/', {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            },
-            timeout: 10000,
-            httpsAgent: new (require('https').Agent)({
-                rejectUnauthorized: false
-            })
-        });
-
-        const html = response.data;
-        const currencyPattern = /id="([a-z]+)"[^>]*>.*?<strong[^>]*>([\d.,]+)<\/strong>/gs;
-        const currencies = {};
-        let match;
-
-        while ((match = currencyPattern.exec(html)) !== null) {
-            const currency = match[1];
-            const value = match[2].replace(/\./g, '').replace(/,/g, '.');
-            currencies[currency] = parseFloat(value);
-        }
-
-        res.json({
-            success: true,
-            currencies_by_id: currencies,
-            html_length: html.length
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-
-// Documentation UI
-app.get('/docs', (req, res) => {
-    res.sendFile(path.join(__dirname, 'docs.html'));
-});
-
-// Redirect root to docs
-app.get('/', (req, res) => {
-    res.redirect('/docs');
-});
-
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
-    console.log('='.repeat(60));
-    console.log('BCV Exchange Rate API');
-    console.log('='.repeat(60));
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Documentation: http://localhost:${PORT}/docs`);
-    console.log(`API: http://localhost:${PORT}/api/v1/tipo-cambio`);
-    console.log('='.repeat(60));
-    console.log('CORS enabled - Accessible from any domain');
-    console.log('='.repeat(60));
-});
+if (require.main === module && !process.env.VERCEL) {
+  startServer();
+}

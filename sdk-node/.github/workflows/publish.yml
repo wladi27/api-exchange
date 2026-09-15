@@ -1,0 +1,37 @@
+name: Publicar SDK a NPM
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Requerido para NPM Provenance
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Instalar dependencias
+        working-directory: ./sdk-node
+        run: npm ci
+
+      - name: Compilar SDK (CJS + ESM + Types)
+        working-directory: ./sdk-node
+        run: npm run build
+
+      - name: Publicar paquete a NPM con Provenance
+        working-directory: ./sdk-node
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,0 +1,219 @@
+const Payment = require('../models/Payment');
+const User = require('../models/User');
+const ApiKey = require('../models/ApiKey');
+const { PLANS } = require('../config/constants');
+
+// GET /api/v1/admin/payments
+async function listPayments(req, res) {
+  try {
+    const { status, page = 1, limit = 20 } = req.query;
+    const filter = {};
+
+    if (status && ['pending', 'approved', 'rejected'].includes(status)) {
+      filter.status = status;
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [payments, total] = await Promise.all([
+      Payment.find(filter)
+        .populate('userId', 'name email company plan subscriptionStatus')
+        .populate('approvedBy', 'name email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Payment.countDocuments(filter)
+    ]);
+
+    return res.json({
+      success: true,
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      payments
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: 'ServerError',
+      message: 'Error al listar pagos para el administrador.'
+    });
+  }
+}
+
+// POST /api/v1/admin/payments/:id/approve
+async function approvePayment(req, res) {
+  try {
+    const paymentId = req.params.id;
+    const adminUser = req.user;
+
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'NotFound',
+        message: 'Reporte de pago no encontrado.'
+      });
+    }
+
+    if (payment.status === 'approved') {
+      return res.status(400).json({
+        success: false,
+        error: 'AlreadyApproved',
+        message: 'Este pago ya ha sido aprobado previamente.'
+      });
+    }
+
+    const user = await User.findById(payment.userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'UserNotFound',
+        message: 'El usuario asociado a este pago ya no existe.'
+      });
+    }
+
+    // Calcular nueva fecha de expiración
+    const daysToAdd = (payment.durationMonths || 1) * 30;
+    const baseDate =
+      user.subscriptionExpiresAt && user.subscriptionExpiresAt > new Date()
+        ? new Date(user.subscriptionExpiresAt)
+        : new Date();
+
+    const newExpiresAt = new Date(baseDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+
+    // Actualizar usuario
+    user.plan = payment.plan;
+    user.subscriptionStatus = 'active';
+    user.subscriptionExpiresAt = newExpiresAt;
+    await user.save();
+
+    // Actualizar estado del pago
+    payment.status = 'approved';
+    payment.approvedBy = adminUser._id;
+    payment.approvedAt = new Date();
+    await payment.save();
+
+    // Actualizar automáticamente todas las API Keys activas del usuario
+    const planConfig = PLANS[payment.plan] || PLANS.starter;
+    await ApiKey.updateMany(
+      { userId: user._id, active: true },
+      {
+        $set: {
+          plan: payment.plan,
+          rateLimitPerMin: planConfig.rateLimitPerMin,
+          monthlyQuota: planConfig.monthlyQuota
+        }
+      }
+    );
+
+    return res.json({
+      success: true,
+      message: `Pago aprobado exitosamente. Usuario actualizado al plan "${planConfig.name}" hasta el ${newExpiresAt.toLocaleDateString()}. Sus API Keys han sido actualizadas con ${planConfig.rateLimitPerMin} req/min y ${planConfig.monthlyQuota.toLocaleString()} req/mes.`,
+      payment: {
+        id: payment._id,
+        status: payment.status,
+        plan: payment.plan,
+        approvedAt: payment.approvedAt
+      },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        plan: user.plan,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionExpiresAt: user.subscriptionExpiresAt
+      }
+    });
+  } catch (error) {
+    console.error('Error en approvePayment:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'ServerError',
+      message: 'Error al aprobar el pago.'
+    });
+  }
+}
+
+// POST /api/v1/admin/payments/:id/reject
+async function rejectPayment(req, res) {
+  try {
+    const paymentId = req.params.id;
+    const { reason } = req.body;
+    const adminUser = req.user;
+
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'NotFound',
+        message: 'Reporte de pago no encontrado.'
+      });
+    }
+
+    payment.status = 'rejected';
+    payment.adminNotes = reason ? reason.trim() : 'Comprobante o referencia no válidos.';
+    payment.approvedBy = adminUser._id;
+    await payment.save();
+
+    return res.json({
+      success: true,
+      message: 'El pago ha sido marcado como rechazado.',
+      payment: {
+        id: payment._id,
+        status: payment.status,
+        adminNotes: payment.adminNotes
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: 'ServerError',
+      message: 'Error al rechazar el pago.'
+    });
+  }
+}
+
+// GET /api/v1/admin/stats
+async function getAdminStats(req, res) {
+  try {
+    const [totalUsers, totalKeys, pendingPayments, approvedPayments] = await Promise.all([
+      User.countDocuments({ role: 'developer' }),
+      ApiKey.countDocuments({ active: true }),
+      Payment.countDocuments({ status: 'pending' }),
+      Payment.countDocuments({ status: 'approved' })
+    ]);
+
+    const usersByPlan = await User.aggregate([
+      { $match: { role: 'developer' } },
+      { $group: { _id: '$plan', count: { $sum: 1 } } }
+    ]);
+
+    return res.json({
+      success: true,
+      stats: {
+        totalUsers,
+        totalActiveKeys: totalKeys,
+        pendingPayments,
+        approvedPayments,
+        usersByPlan: usersByPlan.reduce((acc, curr) => {
+          acc[curr._id] = curr.count;
+          return acc;
+        }, {})
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: 'ServerError',
+      message: 'Error al consultar estadísticas de administración.'
+    });
+  }
+}
+
+module.exports = {
+  listPayments,
+  approvePayment,
+  rejectPayment,
+  getAdminStats
+};

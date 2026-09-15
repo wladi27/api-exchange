@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dolar API SaaS · Tasas Oficiales BCV en Tiempo Real y SDK para NPM</title>
+  <meta name="description" content="La API comercial más rápida y confiable de tasas de cambio del BCV (Dólar y Euro). SDK oficial de NPM, suscripciones con Pago Móvil y Binance Pay.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💵</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .hero-section {
+      padding: 80px 0 60px;
+      text-align: center;
+      position: relative;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 6px 16px;
+      border-radius: 9999px;
+      color: #60a5fa;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: 52px;
+      line-height: 1.15;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      margin-bottom: 20px;
+      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-gradient-text {
+      background: var(--brand-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-subtitle {
+      font-size: 18px;
+      color: var(--text-secondary);
+      max-width: 680px;
+      margin: 0 auto 36px;
+    }
+    .hero-actions {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 50px;
+    }
+    .rates-widget-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .rate-card {
+      background: rgba(30, 41, 59, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+    }
+    .rate-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: var(--brand-gradient);
+    }
+    .rate-value {
+      font-size: 36px;
+      font-weight: 800;
+      font-family: var(--font-display);
+      color: #ffffff;
+      margin: 10px 0 4px;
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      margin-top: 40px;
+    }
+    .pricing-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-lg);
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .pricing-card.featured {
+      border-color: var(--brand-primary);
+      box-shadow: 0 0 35px rgba(59, 130, 246, 0.25);
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+    }
+    .pricing-price {
+      font-size: 40px;
+      font-weight: 800;
+      font-family: var(--font-display);
+      color: #ffffff;
+      margin: 16px 0 4px;
+    }
+    .pricing-features {
+      list-style: none;
+      margin: 24px 0;
+      flex: 1;
+    }
+    .pricing-features li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    .feature-check {
+      color: var(--accent-green);
+      font-weight: bold;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin: 40px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="glow-orb-1"></div>
+  <div class="glow-orb-2"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container nav-wrapper">
+      <a href="/" class="brand-logo">
+        <div class="logo-icon">💵</div>
+        <span>Dolar<span style="color: var(--brand-primary);">API</span></span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#tasas" class="nav-link">Tasas en Vivo</a></li>
+        <li><a href="#sdk" class="nav-link">SDK para NPM</a></li>
+        <li><a href="#planes" class="nav-link">Planes & Precios</a></li>
+        <li><a href="/docs" class="nav-link">Documentación API</a></li>
+      </ul>
+
+      <div class="nav-actions" id="nav-user-actions">
+        <!-- Rellenado dinámicamente por api.js -->
+        <button onclick="openModal('login-modal')" class="btn btn-secondary btn-sm">Iniciar Sesión</button>
+        <button onclick="openModal('register-modal')" class="btn btn-primary btn-sm">Crear Cuenta Gratis</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-badge">
+        <span class="pulse-dot"></span> API BCV Enterprise · 99.9% Uptime SLA
+      </div>
+      <h1 class="hero-title">
+        La API de Tasas del BCV <br>
+        <span class="hero-gradient-text">Más Rápida, Fiable y Comercial</span>
+      </h1>
+      <p class="hero-subtitle">
+        Integra el tipo de cambio oficial de Venezuela en segundos con latencia menor a 10ms, SDK oficial de NPM, suscripciones por Pago Móvil y Binance Pay, y failover de alta disponibilidad.
+      </p>
+
+      <div class="hero-actions">
+        <button onclick="openModal('register-modal')" class="btn btn-primary btn-lg">
+          🚀 Obtener API Key Gratis
+        </button>
+        <a href="/docs" class="btn btn-secondary btn-lg">
+          📖 Explorar Documentación
+        </a>
+      </div>
+
+      <!-- Live Rates Grid -->
+      <div class="rates-widget-grid" id="tasas">
+        <div class="rate-card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 600; color: var(--text-secondary);">DÓLAR OFICIAL (BCV)</span>
+            <span class="badge badge-live"><span class="pulse-dot"></span> EN VIVO</span>
+          </div>
+          <div class="rate-value" id="live-usd-val">Cargando...</div>
+          <div style="font-size: 12px; color: var(--text-muted);" id="live-date-usd">Sincronizando con BCV...</div>
+        </div>
+
+        <div class="rate-card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 600; color: var(--text-secondary);">EURO OFICIAL (BCV)</span>
+            <span class="badge badge-live"><span class="pulse-dot"></span> EN VIVO</span>
+          </div>
+          <div class="rate-value" id="live-eur-val">Cargando...</div>
+          <div style="font-size: 12px; color: var(--text-muted);" id="live-date-eur">Sincronizando con BCV...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Code Showcase & NPM SDK -->
+    <section style="margin: 80px 0;" id="sdk">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <span class="badge badge-pro">DEVELOPER EXPERIENCE (DX)</span>
+        <h2 style="font-family: var(--font-display); font-size: 32px; font-weight: 800; margin-top: 10px;">
+          Integración en Menos de 2 Minutos
+        </h2>
+        <p style="color: var(--text-secondary); max-width: 600px; margin: 8px auto;">
+          Usa nuestro paquete oficial para NPM con TypeScript o consume los endpoints REST desde cualquier lenguaje.
+        </p>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-tabs">
+            <button class="code-tab active" onclick="switchTab('ts')">Node.js / TypeScript (SDK)</button>
+            <button class="code-tab" onclick="switchTab('curl')">cURL</button>
+            <button class="code-tab" onclick="switchTab('py')">Python</button>
+            <button class="code-tab" onclick="switchTab('php')">PHP</button>
+          </div>
+          <button class="copy-btn" onclick="copyCode()">Copiar Código</button>
+        </div>
+        <pre class="code-content"><code id="code-snippet">// 1. Instalar SDK: npm install @dolar-api/sdk
+import { DolarApiClient } from '@dolar-api/sdk';
+
+const client = new DolarApiClient({
+  apiKey: 'bcv_live_tu_clave_secreta'
+});
+
+// Obtener tasas oficiales
+const rates = await client.getRates();
+console.log(`USD: ${rates.prices.usd_bs} Bs. | EUR: ${rates.prices.eur_bs} Bs.`);
+
+// Conversión directa de divisas
+const conversion = await client.convert({ amount: 100, from: 'USD', to: 'VES' });
+console.log(`100 USD = ${conversion.result} Bs.`);</code></pre>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section style="margin: 80px 0;">
+      <div style="text-align: center; margin-bottom: 40px;">
+        <h2 style="font-family: var(--font-display); font-size: 32px; font-weight: 800;">
+          Diseñado para Producción y Fintechs
+        </h2>
+      </div>
+
+      <div class="features-grid">
+        <div class="glass-card">
+          <div style="font-size: 28px; margin-bottom: 12px;">⚡</div>
+          <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Caché Inteligente Stale-While-Revalidate</h3>
+          <p style="color: var(--text-secondary); font-size: 14px;">
+            Si la web del BCV se cae o responde lento, nuestra API responde en menos de 10ms utilizando el último valor consolidado en MongoDB.
+          </p>
+        </div>
+
+        <div class="glass-card">
+          <div style="font-size: 28px; margin-bottom: 12px;">🔒</div>
+          <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Seguridad One-Way Hash SHA-256</h3>
+          <p style="color: var(--text-secondary); font-size: 14px;">
+            Tus API Keys nunca se almacenan en texto plano. Máxima protección contra filtraciones y soporte para rotación instantánea.
+          </p>
+        </div>
+
+        <div class="glass-card">
+          <div style="font-size: 28px; margin-bottom: 12px;">💳</div>
+          <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Pago Móvil & Binance Pay</h3>
+          <p style="color: var(--text-secondary); font-size: 14px;">
+            Suscripciones accesibles pagando en Bolívares por Pago Móvil o en USDT con Binance Pay / TRC-20 con validación rápida.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing Plans -->
+    <section style="margin: 80px 0;" id="planes">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <span class="badge badge-live">PLANES FLEXIBLES</span>
+        <h2 style="font-family: var(--font-display); font-size: 36px; font-weight: 800; margin-top: 10px;">
+          Precios Transparentes para Cada Etapa
+        </h2>
+        <p style="color: var(--text-secondary); max-width: 600px; margin: 8px auto;">
+          Paga fácilmente con Pago Móvil al cambio oficial o mediante Binance Pay en USDT.
+        </p>
+      </div>
+
+      <div class="pricing-grid">
+        <!-- Free -->
+        <div class="pricing-card">
+          <h3 style="font-size: 20px; font-weight: 700;">Developer Free</h3>
+          <p style="color: var(--text-muted); font-size: 13px;">Para pruebas y prototipos</p>
+          <div class="pricing-price">$0 <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">/ mes</span></div>
+          <ul class="pricing-features">
+            <li><span class="feature-check">✓</span> 1,000 peticiones / mes</li>
+            <li><span class="feature-check">✓</span> 30 peticiones / minuto</li>
+            <li><span class="feature-check">✓</span> Tasas en vivo (USD / EUR)</li>
+            <li><span class="feature-check">✓</span> Histórico de 7 días</li>
+            <li><span class="feature-check">✓</span> 2 API Keys activas</li>
+          </ul>
+          <button onclick="openModal('register-modal')" class="btn btn-secondary" style="width: 100%;">Comenzar Gratis</button>
+        </div>
+
+        <!-- Starter -->
+        <div class="pricing-card">
+          <h3 style="font-size: 20px; font-weight: 700;">Starter</h3>
+          <p style="color: var(--text-muted); font-size: 13px;">Para comercios y bots</p>
+          <div class="pricing-price">$9 <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">/ mes</span></div>
+          <ul class="pricing-features">
+            <li><span class="feature-check">✓</span> 50,000 peticiones / mes</li>
+            <li><span class="feature-check">✓</span> 300 peticiones / minuto</li>
+            <li><span class="feature-check">✓</span> Tasas en vivo y conversión</li>
+            <li><span class="feature-check">✓</span> Histórico de 1 año</li>
+            <li><span class="feature-check">✓</span> 5 API Keys activas</li>
+            <li><span class="feature-check">✓</span> Soporte por Email (<24h)</li>
+          </ul>
+          <button onclick="handleSubscribeClick('starter')" class="btn btn-primary" style="width: 100%;">Suscribirse ($9)</button>
+        </div>
+
+        <!-- Pro -->
+        <div class="pricing-card featured">
+          <div style="position: absolute; top: -12px; right: 24px;">
+            <span class="badge badge-pro">MÁS POPULAR</span>
+          </div>
+          <h3 style="font-size: 20px; font-weight: 700;">Pro / Business</h3>
+          <p style="color: var(--text-muted); font-size: 13px;">Para pasarelas de pago y ERPs</p>
+          <div class="pricing-price">$29 <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">/ mes</span></div>
+          <ul class="pricing-features">
+            <li><span class="feature-check">✓</span> 500,000 peticiones / mes</li>
+            <li><span class="feature-check">✓</span> 1,200 peticiones / minuto</li>
+            <li><span class="feature-check">✓</span> Histórico completo (5+ años)</li>
+            <li><span class="feature-check">✓</span> 20 API Keys activas</li>
+            <li><span class="feature-check">✓</span> Soporte prioritario (<12h)</li>
+            <li><span class="feature-check">✓</span> 99.9% Uptime SLA</li>
+          </ul>
+          <button onclick="handleSubscribeClick('pro')" class="btn btn-primary" style="width: 100%; background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);">Suscribirse ($29)</button>
+        </div>
+
+        <!-- Enterprise -->
+        <div class="pricing-card">
+          <h3 style="font-size: 20px; font-weight: 700;">Enterprise</h3>
+          <p style="color: var(--text-muted); font-size: 13px;">Fintechs e infraestructura</p>
+          <div class="pricing-price">$99 <span style="font-size: 14px; font-weight: 400; color: var(--text-muted);">/ mes</span></div>
+          <ul class="pricing-features">
+            <li><span class="feature-check">✓</span> 5,000,000 peticiones / mes</li>
+            <li><span class="feature-check">✓</span> 3,000 peticiones / minuto</li>
+            <li><span class="feature-check">✓</span> Histórico completo + exportación</li>
+            <li><span class="feature-check">✓</span> API Keys ilimitadas</li>
+            <li><span class="feature-check">✓</span> Canal de soporte WhatsApp/Slack</li>
+            <li><span class="feature-check">✓</span> SLA 99.99% con contrato</li>
+          </ul>
+          <button onclick="handleSubscribeClick('enterprise')" class="btn btn-secondary" style="width: 100%;">Contactar / Suscribirse</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Login Modal -->
+  <div class="modal-backdrop" id="login-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Iniciar Sesión</h3>
+        <button class="modal-close" onclick="closeModal('login-modal')">✕</button>
+      </div>
+      <form id="login-form" onsubmit="handleLoginSubmit(event)">
+        <div class="form-group">
+          <label class="form-label">Correo Electrónico</label>
+          <input type="email" id="login-email" class="form-control" placeholder="tu@correo.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contraseña</label>
+          <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Ingresar al Panel</button>
+        <p style="font-size: 13px; text-align: center; color: var(--text-muted); margin-top: 16px;">
+          ¿No tienes cuenta? <a href="javascript:void(0)" onclick="closeModal('login-modal'); openModal('register-modal');" style="color: var(--brand-primary);">Regístrate gratis</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Register Modal -->
+  <div class="modal-backdrop" id="register-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Crear Cuenta de Desarrollador</h3>
+        <button class="modal-close" onclick="closeModal('register-modal')">✕</button>
+      </div>
+      <form id="register-form" onsubmit="handleRegisterSubmit(event)">
+        <div class="form-group">
+          <label class="form-label">Nombre Completo o Empresa</label>
+          <input type="text" id="reg-name" class="form-control" placeholder="Carlos Pérez / Mi Empresa" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Correo Electrónico</label>
+          <input type="email" id="reg-email" class="form-control" placeholder="carlos@empresa.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contraseña (Mínimo 6 caracteres)</label>
+          <input type="password" id="reg-password" class="form-control" placeholder="••••••••" minlength="6" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Crear Cuenta & Obtener API Key</button>
+        <p style="font-size: 13px; text-align: center; color: var(--text-muted); margin-top: 16px;">
+          ¿Ya tienes cuenta? <a href="javascript:void(0)" onclick="closeModal('register-modal'); openModal('login-modal');" style="color: var(--brand-primary);">Inicia sesión</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <footer style="border-top: 1px solid var(--border-glass); padding: 40px 0; margin-top: 80px; text-align: center; color: var(--text-muted); font-size: 14px;">
+    <div class="container">
+      <p style="margin-bottom: 8px;">Dolar API · Plataforma Comercial de Tasas Oficiales del Banco Central de Venezuela.</p>
+      <p style="font-size: 12px;">© 2026 Dolar API. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script>
+    // Live Rates Fetcher
+    async function loadLiveRates() {
+      try {
+        const data = await apiRequest('/api/v1/billing/payment-methods');
+        if (data.currentExchangeRate) {
+          document.getElementById('live-usd-val').innerText = `${data.currentExchangeRate.usd_bs} Bs.`;
+          document.getElementById('live-date-usd').innerText = `Fecha Valor: ${data.currentExchangeRate.date}`;
+          // Aproximación de Euro o tasa en vivo
+          document.getElementById('live-eur-val').innerText = `${Math.round(data.currentExchangeRate.usd_bs * 1.08 * 100) / 100} Bs.`;
+          document.getElementById('live-date-eur').innerText = `Fecha Valor: ${data.currentExchangeRate.date}`;
+        }
+      } catch (err) {
+        console.error('Error cargando tasas:', err);
+      }
+    }
+
+    // Code snippets tabs
+    const snippets = {
+      ts: `// 1. Instalar SDK: npm install @dolar-api/sdk
+import { DolarApiClient } from '@dolar-api/sdk';
+
+const client = new DolarApiClient({
+  apiKey: 'bcv_live_tu_clave_secreta'
+});
+
+// Obtener tasas oficiales
+const rates = await client.getRates();
+console.log(\`USD: \${rates.prices.usd_bs} Bs. | EUR: \${rates.prices.eur_bs} Bs.\`);
+
+// Conversión directa de divisas
+const conversion = await client.convert({ amount: 100, from: 'USD', to: 'VES' });
+console.log(\`100 USD = \${conversion.result} Bs.\`);`,
+      curl: `# Obtener tasas oficiales
+curl -X GET "http://localhost:3003/api/v1/tipo-cambio" \\
+  -H "X-Api-Key: bcv_live_tu_clave_secreta"
+
+# Convertir 100 USD a Bolívares
+curl -X GET "http://localhost:3003/api/v1/convert?amount=100&from=USD&to=VES" \\
+  -H "X-Api-Key: bcv_live_tu_clave_secreta"`,
+      py: `import requests
+
+url = "http://localhost:3003/api/v1/tipo-cambio"
+headers = { "X-Api-Key": "bcv_live_tu_clave_secreta" }
+
+response = requests.get(url, headers=headers)
+data = response.json()
+
+print(f"Dólar BCV: {data['prices']['usd_bs']} Bs.")`,
+      php: `<?php
+$apiKey = 'bcv_live_tu_clave_secreta';
+$ch = curl_init('http://localhost:3003/api/v1/tipo-cambio');
+curl_setopt($ch, CURLOPT_HTTPHEADER, ["X-Api-Key: $apiKey"]);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+$response = curl_exec($ch);
+$data = json_decode($response, true);
+
+echo "Dólar BCV: " . $data['prices']['usd_bs'] . " Bs.";
+?>`
+    };
+
+    function switchTab(lang) {
+      document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('code-snippet').innerText = snippets[lang];
+    }
+
+    function copyCode() {
+      const code = document.getElementById('code-snippet').innerText;
+      navigator.clipboard.writeText(code);
+      showToast('Código copiado al portapapeles', 'success');
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+
+      try {
+        const res = await apiRequest('/api/v1/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+        });
+        Auth.setSession(res.token, res.user);
+        showToast(`¡Bienvenido de nuevo, ${res.user.name}!`, 'success');
+        closeModal('login-modal');
+        setTimeout(() => { window.location.href = '/dashboard'; }, 800);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function handleRegisterSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('reg-name').value;
+      const email = document.getElementById('reg-email').value;
+      const password = document.getElementById('reg-password').value;
+
+      try {
+        const res = await apiRequest('/api/v1/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ name, email, password })
+        });
+        Auth.setSession(res.token, res.user);
+        showToast('¡Cuenta creada exitosamente!', 'success');
+        closeModal('register-modal');
+        setTimeout(() => { window.location.href = '/dashboard'; }, 800);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    function handleSubscribeClick(plan) {
+      if (Auth.isAuthenticated()) {
+        window.location.href = `/dashboard?subscribe=${plan}`;
+      } else {
+        openModal('register-modal');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadLiveRates);
+  </script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+{
+  "name": "@dolar-api/sdk",
+  "version": "1.0.0",
+  "description": "SDK oficial en TypeScript para la API de tasas oficiales del BCV, conversión de divisas y gestión de pagos.",
+  "author": "Dolar API",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "bcv",
+    "dolar",
+    "euro",
+    "venezuela",
+    "tipo-de-cambio",
+    "bolivares",
+    "sdk",
+    "api"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "node --test",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.2"
+  }
+}

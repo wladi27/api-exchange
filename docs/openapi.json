@@ -1,0 +1,372 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Dolar API & BCV Exchange Rates SaaS",
+    "version": "1.0.0",
+    "description": "API comercial de alta disponibilidad para consulta de tasas oficiales del Banco Central de Venezuela (USD, EUR, etc.), conversión de divisas a 2 decimales, gestión de suscripciones con Pago Móvil y Binance Pay, y administración de API Keys.",
+    "contact": {
+      "name": "Soporte Técnico",
+      "email": "soporte@dolarapi.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3003",
+      "description": "Servidor Local de Desarrollo"
+    }
+  ],
+  "tags": [
+    { "name": "Tasas de Cambio", "description": "Endpoints públicos y de alta velocidad protegidos por API Key con respuestas a 2 decimales" },
+    { "name": "Autenticación", "description": "Registro de desarrolladores, inicio de sesión y gestión de cuenta" },
+    { "name": "API Keys", "description": "Gestión en autoservicio de claves de acceso" },
+    { "name": "Facturación y Pagos", "description": "Planes, datos de Pago Móvil / Binance y reporte de comprobantes" },
+    { "name": "Administración", "description": "Revisión y aprobación de pagos para administradores" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Api-Key",
+        "description": "Clave de API provista por la plataforma (ej. bcv_live_...)"
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Token JWT de sesión obtenido tras el login en el portal"
+      }
+    },
+    "schemas": {
+      "ExchangeRates": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "source": { "type": "string", "example": "Banco Central de Venezuela (BCV)" },
+          "base_currency": { "type": "string", "example": "VES" },
+          "date": { "type": "string", "example": "Lunes, 07 Septiembre 2026" },
+          "prices": {
+            "type": "object",
+            "properties": {
+              "usd_bs": { "type": "number", "example": 813.74 },
+              "eur_bs": { "type": "number", "example": 945.65 }
+            }
+          },
+          "is_cached": { "type": "boolean", "example": true }
+        }
+      },
+      "SingleCurrencyUSD": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "currency": { "type": "string", "example": "USD" },
+          "symbol": { "type": "string", "example": "$" },
+          "price_bs": { "type": "number", "example": 813.74 },
+          "base_currency": { "type": "string", "example": "VES" },
+          "date": { "type": "string", "example": "Lunes, 07 Septiembre 2026" },
+          "source": { "type": "string", "example": "Banco Central de Venezuela (BCV)" }
+        }
+      },
+      "SingleCurrencyEUR": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "currency": { "type": "string", "example": "EUR" },
+          "symbol": { "type": "string", "example": "€" },
+          "price_bs": { "type": "number", "example": 945.65 },
+          "base_currency": { "type": "string", "example": "VES" },
+          "date": { "type": "string", "example": "Lunes, 07 Septiembre 2026" },
+          "source": { "type": "string", "example": "Banco Central de Venezuela (BCV)" }
+        }
+      },
+      "ConversionResult": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "amount": { "type": "number", "example": 150.00 },
+          "from": { "type": "string", "example": "USD" },
+          "to": { "type": "string", "example": "VES" },
+          "rate": { "type": "number", "example": 813.74 },
+          "result": { "type": "number", "example": 122061.00 },
+          "date": { "type": "string", "example": "Lunes, 07 Septiembre 2026" },
+          "source": { "type": "string", "example": "Banco Central de Venezuela (BCV)" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/tipo-cambio": {
+      "get": {
+        "tags": ["Tasas de Cambio"],
+        "summary": "Obtener tasas oficiales a 2 decimales (USD y EUR)",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Tasas oficiales obtenidas exitosamente",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ExchangeRates" }
+              }
+            }
+          },
+          "401": { "description": "API Key inválida o no provista" },
+          "429": { "description": "Límite de velocidad o cuota mensual excedida" }
+        }
+      }
+    },
+    "/api/v1/dolar": {
+      "get": {
+        "tags": ["Tasas de Cambio"],
+        "summary": "Obtener precio del Dólar oficial en Bolívares",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Precio del dólar en Bolívares a 2 decimales",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SingleCurrencyUSD" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/euro": {
+      "get": {
+        "tags": ["Tasas de Cambio"],
+        "summary": "Obtener precio del Euro oficial en Bolívares",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Precio del euro en Bolívares a 2 decimales",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SingleCurrencyEUR" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/convert": {
+      "get": {
+        "tags": ["Tasas de Cambio"],
+        "summary": "Convertir montos entre USD, EUR y VES con precisión financiera a 2 decimales",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          { "name": "amount", "in": "query", "required": true, "schema": { "type": "number", "example": 150.00 } },
+          { "name": "from", "in": "query", "schema": { "type": "string", "example": "USD" } },
+          { "name": "to", "in": "query", "schema": { "type": "string", "example": "VES" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Monto convertido exitosamente",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConversionResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/historico": {
+      "get": {
+        "tags": ["Tasas de Cambio"],
+        "summary": "Consultar histórico de tasas",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          { "name": "startDate", "in": "query", "schema": { "type": "string", "example": "2026-01-01" } },
+          { "name": "endDate", "in": "query", "schema": { "type": "string", "example": "2026-01-31" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "example": 30 } }
+        ],
+        "responses": {
+          "200": { "description": "Lista de tasas históricas" }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": ["Autenticación"],
+        "summary": "Registrar nueva cuenta de desarrollador",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": { "type": "string", "example": "Carlos Pérez" },
+                  "email": { "type": "string", "example": "carlos@empresa.com" },
+                  "password": { "type": "string", "example": "MiPassword123" },
+                  "company": { "type": "string", "example": "Mi Tienda Online" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Usuario registrado y API Key inicial generada" }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["Autenticación"],
+        "summary": "Iniciar sesión y obtener JWT",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "example": "carlos@empresa.com" },
+                  "password": { "type": "string", "example": "MiPassword123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login exitoso con token JWT" }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": ["Autenticación"],
+        "summary": "Obtener perfil del usuario y estado de suscripción",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Datos del perfil" }
+        }
+      }
+    },
+    "/api/v1/user/keys": {
+      "get": {
+        "tags": ["API Keys"],
+        "summary": "Listar API Keys del desarrollador",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Lista de claves enmascaradas" }
+        }
+      },
+      "post": {
+        "tags": ["API Keys"],
+        "summary": "Crear nueva API Key",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string", "example": "Servidor Node Producción" },
+                  "environment": { "type": "string", "enum": ["live", "test"], "example": "live" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Clave generada en texto plano una sola vez" }
+        }
+      }
+    },
+    "/api/v1/billing/payment-methods": {
+      "get": {
+        "tags": ["Facturación y Pagos"],
+        "summary": "Consultar planes y datos de Pago Móvil y Binance Pay",
+        "responses": {
+          "200": { "description": "Detalles de cuentas de pago y precios en Bs y USD" }
+        }
+      }
+    },
+    "/api/v1/billing/report-payment": {
+      "post": {
+        "tags": ["Facturación y Pagos"],
+        "summary": "Reportar pago y subir comprobante",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["plan", "paymentMethod", "referenceNumber", "amountPaid", "receipt"],
+                "properties": {
+                  "plan": { "type": "string", "enum": ["starter", "pro", "enterprise"] },
+                  "durationMonths": { "type": "integer", "example": 1 },
+                  "paymentMethod": { "type": "string", "enum": ["pago_movil", "binance_pay", "usdt_trc20", "usdt_bep20"] },
+                  "referenceNumber": { "type": "string", "example": "0982348123" },
+                  "amountPaid": { "type": "number", "example": 9.00 },
+                  "currency": { "type": "string", "example": "USDT" },
+                  "receipt": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Comprobante recibido y registrado como pendiente" }
+        }
+      }
+    },
+    "/api/v1/admin/payments": {
+      "get": {
+        "tags": ["Administración"],
+        "summary": "Listar pagos para revisión",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "approved", "rejected"] } }
+        ],
+        "responses": {
+          "200": { "description": "Listado de pagos con datos de usuarios y capturas" }
+        }
+      }
+    },
+    "/api/v1/admin/payments/{id}/approve": {
+      "post": {
+        "tags": ["Administración"],
+        "summary": "Aprobar pago y actualizar límites de API Keys inmediatamente",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Pago aprobado y usuario actualizado" }
+        }
+      }
+    },
+    "/api/v1/admin/payments/{id}/reject": {
+      "post": {
+        "tags": ["Administración"],
+        "summary": "Rechazar pago con motivo",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": { "type": "string", "example": "Referencia no encontrada en la cuenta bancaria" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Pago marcado como rechazado" }
+        }
+      }
+    }
+  }
+}
