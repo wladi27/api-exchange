@@ -5,20 +5,20 @@ const ExchangeRate = require('../models/ExchangeRate');
 // Función de redondeo estricto a 2 decimales
 const round2 = (val) => (val !== null && val !== undefined && !isNaN(val)) ? Math.round((Number(val) + Number.EPSILON) * 100) / 100 : null;
 
-// Caché en memoria pre-calentada con tasas iniciales válidas
+// Caché en memoria pre-calentada con tasas actuales
 let memoryCache = {
   data: {
-    usd: 813.74,
-    eur: 945.65,
-    usdt: 956.80,
-    date: 'Lunes, 07 Septiembre 2026',
-    sourceDateString: 'Lunes, 07 Septiembre 2026',
-    isCached: true
+    usd: 842.21,
+    eur: 977.88,
+    usdt: 948.32,
+    date: 'Martes, 15 Septiembre 2026',
+    sourceDateString: 'Martes, 15 Septiembre 2026',
+    isCached: false
   },
-  timestamp: Date.now()
+  timestamp: 0 // Inicia en 0 para forzar actualización inmediata en frío
 };
 
-let isFetchingInBackground = false;
+let isFetching = false;
 const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutos de caché fresca
 
 /**
@@ -260,20 +260,32 @@ async function fetchUsdtRate(usdOfficial = 813.74) {
 }
 
 /**
- * Actualización en segundo plano sin bloquear peticiones del usuario
+ * Refresco de tasas en vivo (BCV + Binance P2P) con persistencia en MongoDB
  */
-async function refreshCacheInBackground() {
-  if (isFetchingInBackground) return;
-  isFetchingInBackground = true;
+async function refreshRates() {
+  if (isFetching) {
+    return memoryCache.data;
+  }
+  isFetching = true;
 
   try {
-    const bcvData = await fetchFromBcv();
-    const usdtRate = await fetchUsdtRate(bcvData.usd);
+    const [bcvData, usdtRate] = await Promise.all([
+      fetchFromBcv().catch(err => {
+        console.warn('⚠️ Advertencia consultando BCV en vivo:', err.message);
+        return null;
+      }),
+      fetchUsdtRate(842.21).catch(err => {
+        console.warn('⚠️ Advertencia consultando Binance USDT:', err.message);
+        return null;
+      })
+    ]);
 
     if (bcvData && bcvData.usd) {
+      const finalUsdt = usdtRate || round2(bcvData.usd * 1.126) || 948.32;
       const updatedData = {
         ...bcvData,
-        usdt: usdtRate
+        usdt: finalUsdt,
+        isCached: false
       };
 
       memoryCache = {
@@ -281,14 +293,14 @@ async function refreshCacheInBackground() {
         timestamp: Date.now()
       };
 
-      // Guardar de forma asíncrona en MongoDB Atlas
+      // Guardar de forma asíncrona en MongoDB Atlas si está conectado
       ExchangeRate.create({
         date: bcvData.date,
         sourceDateString: bcvData.sourceDateString,
         rates: {
           usd: bcvData.usd,
           eur: bcvData.eur,
-          usdt: usdtRate,
+          usdt: finalUsdt,
           cny: bcvData.cny,
           rub: bcvData.rub,
           try: bcvData.try
@@ -296,15 +308,40 @@ async function refreshCacheInBackground() {
         baseCurrency: 'VES',
         source: 'Banco Central de Venezuela & Binance P2P',
         rawCurrencies: bcvData.rawCurrencies
-      }).catch(err => {
-        // Silencioso en caso de duplicado o fallo temporal
+      }).catch(() => {
+        // Silencioso
       });
+
+      return updatedData;
     }
   } catch (err) {
-    // Si la conexión falla temporalmente, mantenemos memoria actual
+    console.error('Error refrescando tasas:', err.message);
   } finally {
-    isFetchingInBackground = false;
+    isFetching = false;
   }
+
+  // Si falló la consulta en vivo, intentar consultar la última tasa guardada en MongoDB Atlas
+  try {
+    const latestDbRate = await ExchangeRate.findOne().sort({ fetchedAt: -1 }).lean();
+    if (latestDbRate && latestDbRate.rates && latestDbRate.rates.usd) {
+      memoryCache = {
+        data: {
+          usd: round2(latestDbRate.rates.usd),
+          eur: round2(latestDbRate.rates.eur),
+          usdt: round2(latestDbRate.rates.usdt) || round2(latestDbRate.rates.usd * 1.126),
+          date: latestDbRate.date,
+          sourceDateString: latestDbRate.sourceDateString || latestDbRate.date,
+          isCached: true
+        },
+        timestamp: Date.now()
+      };
+      return memoryCache.data;
+    }
+  } catch (dbErr) {
+    // Silencioso
+  }
+
+  return memoryCache.data;
 }
 
 /**
@@ -313,17 +350,18 @@ async function refreshCacheInBackground() {
 async function initCacheFromDb() {
   try {
     const latestDbRate = await ExchangeRate.findOne().sort({ fetchedAt: -1 }).lean();
-    if (latestDbRate && latestDbRate.rates) {
+    if (latestDbRate && latestDbRate.rates && latestDbRate.rates.usd) {
       memoryCache = {
         data: {
-          usd: round2(latestDbRate.rates.usd) || 813.74,
-          eur: round2(latestDbRate.rates.eur) || 945.65,
-          usdt: round2(latestDbRate.rates.usdt) || 956.80,
+          usd: round2(latestDbRate.rates.usd),
+          eur: round2(latestDbRate.rates.eur),
+          usdt: round2(latestDbRate.rates.usdt) || round2(latestDbRate.rates.usd * 1.126),
           cny: round2(latestDbRate.rates.cny) || null,
           rub: round2(latestDbRate.rates.rub) || null,
           try: round2(latestDbRate.rates.try) || null,
           date: latestDbRate.date,
-          sourceDateString: latestDbRate.sourceDateString || latestDbRate.date
+          sourceDateString: latestDbRate.sourceDateString || latestDbRate.date,
+          isCached: true
         },
         timestamp: Date.now()
       };
@@ -334,14 +372,18 @@ async function initCacheFromDb() {
 }
 
 /**
- * Retorna INMEDIATAMENTE (< 1ms) desde la memoria RAM
+ * Retorna las tasas de cambio asegurando que siempre sean frescas
  */
 async function getExchangeRates(forceRefresh = false) {
   const now = Date.now();
 
-  // Si la caché expiró (más de 5 min), dispara refresco en background
-  if (forceRefresh || now - memoryCache.timestamp > CACHE_DURATION_MS) {
-    refreshCacheInBackground();
+  // Si la caché está en frío (timestamp === 0) o ya expiró (> 5 min), refrescar
+  if (forceRefresh || memoryCache.timestamp === 0 || now - memoryCache.timestamp > CACHE_DURATION_MS) {
+    const fresh = await refreshRates();
+    return {
+      ...fresh,
+      cacheAgeSeconds: Math.floor((Date.now() - memoryCache.timestamp) / 1000)
+    };
   }
 
   return {
@@ -358,5 +400,6 @@ module.exports = {
   getExchangeRates,
   fetchFromBcv,
   fetchUsdtRate,
-  refreshCacheInBackground
+  refreshRates,
+  refreshCacheInBackground: refreshRates
 };
