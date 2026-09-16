@@ -14,6 +14,7 @@ router.post(
   uploadReceipt.single('receipt'),
   billingController.reportPayment
 );
+router.get('/my-subscription', requireAuth, billingController.getMySubscription);
 router.get('/my-payments', requireAuth, billingController.getMyPayments);
 
 module.exports = router;

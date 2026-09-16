@@ -1,7 +1,99 @@
 const Payment = require('../models/Payment');
 const User = require('../models/User');
 const ApiKey = require('../models/ApiKey');
+const AppConfig = require('../models/AppConfig');
 const { PLANS } = require('../config/constants');
+
+// GET /api/v1/admin/config
+async function getAdminConfig(req, res) {
+  try {
+    const config = await AppConfig.getOrCreate();
+    return res.json({
+      success: true,
+      config: {
+        plans: config.plans,
+        paymentMethods: config.paymentMethods,
+        updatedAt: config.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error('Error en getAdminConfig:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'ServerError',
+      message: 'Error al consultar la configuración de la aplicación.'
+    });
+  }
+}
+
+// PUT /api/v1/admin/config/plans
+async function updatePlansConfig(req, res) {
+  try {
+    const { plans } = req.body;
+    if (!Array.isArray(plans) || plans.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'InvalidPlans',
+        message: 'Debe proporcionar un arreglo de planes válido.'
+      });
+    }
+
+    const config = await AppConfig.getOrCreate();
+    config.plans = plans;
+    config.updatedBy = req.user._id;
+    config.updatedAt = new Date();
+    await config.save();
+
+    return res.json({
+      success: true,
+      message: 'Planes y precios actualizados exitosamente.',
+      plans: config.plans
+    });
+  } catch (error) {
+    console.error('Error en updatePlansConfig:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'ServerError',
+      message: 'Error al actualizar planes y precios.'
+    });
+  }
+}
+
+// PUT /api/v1/admin/config/payment-methods
+async function updatePaymentMethodsConfig(req, res) {
+  try {
+    const { paymentMethods } = req.body;
+    if (!paymentMethods || typeof paymentMethods !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'InvalidPaymentMethods',
+        message: 'Datos de métodos de pago inválidos.'
+      });
+    }
+
+    const config = await AppConfig.getOrCreate();
+    config.paymentMethods = {
+      ...config.paymentMethods,
+      ...paymentMethods
+    };
+    config.updatedBy = req.user._id;
+    config.updatedAt = new Date();
+    await config.save();
+
+    return res.json({
+      success: true,
+      message: 'Datos de métodos de pago actualizados exitosamente.',
+      paymentMethods: config.paymentMethods
+    });
+  } catch (error) {
+    console.error('Error en updatePaymentMethodsConfig:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'ServerError',
+      message: 'Error al actualizar métodos de pago.'
+    });
+  }
+}
 
 // GET /api/v1/admin/payments
 async function listPayments(req, res) {
@@ -95,21 +187,21 @@ async function approvePayment(req, res) {
     await payment.save();
 
     // Actualizar automáticamente todas las API Keys activas del usuario
-    const planConfig = PLANS[payment.plan] || PLANS.starter;
+    const planConfig = PLANS[payment.plan] || PLANS.pro || PLANS.starter || { rateLimitPerMin: 600, monthlyQuota: 100000 };
     await ApiKey.updateMany(
       { userId: user._id, active: true },
       {
         $set: {
           plan: payment.plan,
-          rateLimitPerMin: planConfig.rateLimitPerMin,
-          monthlyQuota: planConfig.monthlyQuota
+          rateLimitPerMin: planConfig.rateLimitPerMin || 600,
+          monthlyQuota: planConfig.monthlyQuota || 100000
         }
       }
     );
 
     return res.json({
       success: true,
-      message: `Pago aprobado exitosamente. Usuario actualizado al plan "${planConfig.name}" hasta el ${newExpiresAt.toLocaleDateString()}. Sus API Keys han sido actualizadas con ${planConfig.rateLimitPerMin} req/min y ${planConfig.monthlyQuota.toLocaleString()} req/mes.`,
+      message: `Pago aprobado exitosamente. Usuario actualizado al plan "${payment.plan}" hasta el ${newExpiresAt.toLocaleDateString()}.`,
       payment: {
         id: payment._id,
         status: payment.status,
@@ -212,6 +304,9 @@ async function getAdminStats(req, res) {
 }
 
 module.exports = {
+  getAdminConfig,
+  updatePlansConfig,
+  updatePaymentMethodsConfig,
   listPayments,
   approvePayment,
   rejectPayment,
