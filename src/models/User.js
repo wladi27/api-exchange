@@ -33,7 +33,7 @@ const UserSchema = new mongoose.Schema(
     },
     plan: {
       type: String,
-      enum: ['free', 'starter', 'pro', 'enterprise'],
+      enum: ['free', 'starter', 'pro', 'pro_annual', 'business', 'enterprise'],
       default: 'free',
       index: true
     },

@@ -10,17 +10,16 @@ const PaymentSchema = new mongoose.Schema(
     },
     plan: {
       type: String,
-      enum: ['starter', 'pro', 'enterprise'],
+      enum: ['free', 'starter', 'pro', 'pro_annual', 'business', 'enterprise'],
       required: [true, 'El plan a contratar es requerido']
     },
     durationMonths: {
       type: Number,
-      enum: [1, 3, 6, 12],
       default: 1
     },
     paymentMethod: {
       type: String,
-      enum: ['pago_movil', 'binance_pay', 'usdt_trc20', 'usdt_bep20', 'transferencia'],
+      enum: ['pago_movil', 'binance_pay', 'zinli', 'paypal', 'usdt_trc20', 'usdt_bep20', 'transferencia'],
       required: [true, 'El método de pago es requerido']
     },
     referenceNumber: {
