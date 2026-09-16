@@ -40,6 +40,7 @@ async function updatePlansConfig(req, res) {
 
     const config = await AppConfig.getOrCreate();
     config.plans = plans;
+    config.markModified('plans');
     config.updatedBy = req.user._id;
     config.updatedAt = new Date();
     await config.save();
@@ -73,9 +74,10 @@ async function updatePaymentMethodsConfig(req, res) {
 
     const config = await AppConfig.getOrCreate();
     config.paymentMethods = {
-      ...config.paymentMethods,
+      ...(config.paymentMethods || {}),
       ...paymentMethods
     };
+    config.markModified('paymentMethods');
     config.updatedBy = req.user._id;
     config.updatedAt = new Date();
     await config.save();

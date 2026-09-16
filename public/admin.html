@@ -495,10 +495,10 @@
 
     function populatePaymentMethods(methods) {
       const pm = methods.pago_movil || {};
-      document.getElementById('pm-bank').value = pm.bank || '';
-      document.getElementById('pm-phone').value = pm.phone || '';
+      document.getElementById('pm-bank').value = pm.bank || pm.bankName || '';
+      document.getElementById('pm-phone').value = pm.phone || pm.phoneNumber || '';
       document.getElementById('pm-id').value = pm.idNumber || '';
-      document.getElementById('pm-name').value = pm.accountHolder || '';
+      document.getElementById('pm-name').value = pm.accountHolder || pm.holderName || '';
 
       const binance = methods.binance_pay || {};
       document.getElementById('binance-payId').value = binance.payId || '';
@@ -508,7 +508,7 @@
 
       const zinli = methods.zinli || {};
       document.getElementById('zinli-email').value = zinli.email || '';
-      document.getElementById('zinli-name').value = zinli.accountHolder || '';
+      document.getElementById('zinli-name').value = zinli.accountHolder || zinli.holderName || '';
 
       const paypal = methods.paypal || {};
       document.getElementById('paypal-email').value = paypal.email || '';
@@ -517,28 +517,60 @@
 
     async function savePaymentMethodsConfig() {
       try {
+        const pmBank = document.getElementById('pm-bank').value.trim();
+        const pmPhone = document.getElementById('pm-phone').value.trim();
+        const pmId = document.getElementById('pm-id').value.trim();
+        const pmName = document.getElementById('pm-name').value.trim();
+
+        const binancePayId = document.getElementById('binance-payId').value.trim();
+        const binanceTrc20 = document.getElementById('binance-trc20').value.trim();
+        const binanceBep20 = document.getElementById('binance-bep20').value.trim();
+        const binanceQr = document.getElementById('binance-qr').value.trim();
+
+        const zinliEmail = document.getElementById('zinli-email').value.trim();
+        const zinliName = document.getElementById('zinli-name').value.trim();
+
+        const paypalEmail = document.getElementById('paypal-email').value.trim();
+        const paypalLink = document.getElementById('paypal-link').value.trim();
+
         const payload = {
           paymentMethods: {
             pago_movil: {
-              bank: document.getElementById('pm-bank').value.trim(),
-              phone: document.getElementById('pm-phone').value.trim(),
-              idNumber: document.getElementById('pm-id').value.trim(),
-              accountHolder: document.getElementById('pm-name').value.trim(),
+              enabled: true,
+              name: 'Pago Móvil (Bolívares)',
+              bank: pmBank,
+              bankName: pmBank,
+              phone: pmPhone,
+              phoneNumber: pmPhone,
+              idNumber: pmId,
+              accountHolder: pmName,
+              holderName: pmName,
               instructions: 'Realiza el pago móvil por el monto exacto en Bolívares y reporta la referencia.'
             },
             binance_pay: {
-              payId: document.getElementById('binance-payId').value.trim(),
-              usdtTrc20Address: document.getElementById('binance-trc20').value.trim(),
-              usdtBep20Address: document.getElementById('binance-bep20').value.trim(),
-              qrImageUrl: document.getElementById('binance-qr').value.trim()
+              enabled: true,
+              name: 'Binance Pay (USDT)',
+              payId: binancePayId,
+              usdtTrc20Address: binanceTrc20,
+              usdtBep20Address: binanceBep20,
+              qrImageUrl: binanceQr,
+              binanceEmail: 'pagos@klippve.com',
+              instructions: 'Envía USDT vía Binance Pay sin comisiones a nuestro Pay ID o Correo.'
             },
             zinli: {
-              email: document.getElementById('zinli-email').value.trim(),
-              accountHolder: document.getElementById('zinli-name').value.trim()
+              enabled: true,
+              name: 'Zinli (USD)',
+              email: zinliEmail,
+              accountHolder: zinliName,
+              holderName: zinliName,
+              instructions: 'Transfiere el monto exacto en USD a nuestro correo de Zinli.'
             },
             paypal: {
-              email: document.getElementById('paypal-email').value.trim(),
-              paypalMeLink: document.getElementById('paypal-link').value.trim()
+              enabled: true,
+              name: 'PayPal (USD)',
+              email: paypalEmail,
+              paypalMeLink: paypalLink,
+              instructions: 'Envía el pago en USD vía PayPal como familiar/amigo.'
             }
           }
         };

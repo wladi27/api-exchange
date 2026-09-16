@@ -19,40 +19,51 @@ const AppConfigSchema = new mongoose.Schema({
   key: { type: String, default: 'global_config', unique: true },
   plans: [PlanSchema],
   paymentMethods: {
-    pago_movil: {
-      enabled: { type: Boolean, default: true },
-      name: { type: String, default: 'Pago Móvil (Bolívares)' },
-      bankName: { type: String, default: '0102 - Banco de Venezuela' },
-      bankCode: { type: String, default: '0102' },
-      phoneNumber: { type: String, default: '0412-1941735' },
-      idNumber: { type: String, default: 'V-27330449' },
-      holderName: { type: String, default: 'Wladimir Figuera' },
-      instructions: { type: String, default: 'Realiza el pago móvil al monto exacto en Bolívares calculado a la tasa oficial del día.' }
-    },
-    binance_pay: {
-      enabled: { type: Boolean, default: true },
-      name: { type: String, default: 'Binance Pay (USDT)' },
-      payId: { type: String, default: '123456789' },
-      binanceEmail: { type: String, default: 'pagos@klippve.com' },
-      instructions: { type: String, default: 'Envía USDT vía Binance Pay sin comisiones a nuestro Pay ID o Correo.' }
-    },
-    zinli: {
-      enabled: { type: Boolean, default: true },
-      name: { type: String, default: 'Zinli (USD)' },
-      email: { type: String, default: 'pagos@klippve.com' },
-      holderName: { type: String, default: 'KlippVE' },
-      instructions: { type: String, default: 'Transfiere el monto exacto en USD a nuestro correo de Zinli.' }
-    },
-    paypal: {
-      enabled: { type: Boolean, default: true },
-      name: { type: String, default: 'PayPal (USD)' },
-      email: { type: String, default: 'pagos@klippve.com' },
-      instructions: { type: String, default: 'Envía el pago en USD vía PayPal como familiar/amigo.' }
+    type: mongoose.Schema.Types.Mixed,
+    default: {
+      pago_movil: {
+        enabled: true,
+        name: 'Pago Móvil (Bolívares)',
+        bank: '0102 - Banco de Venezuela',
+        bankName: '0102 - Banco de Venezuela',
+        bankCode: '0102',
+        phone: '0412-1941735',
+        phoneNumber: '0412-1941735',
+        idNumber: 'V-27330449',
+        accountHolder: 'Wladimir Figuera',
+        holderName: 'Wladimir Figuera',
+        instructions: 'Realiza el pago móvil al monto exacto en Bolívares calculado a la tasa oficial del día.'
+      },
+      binance_pay: {
+        enabled: true,
+        name: 'Binance Pay (USDT)',
+        payId: '123456789',
+        usdtTrc20Address: '',
+        usdtBep20Address: '',
+        qrImageUrl: '',
+        binanceEmail: 'pagos@klippve.com',
+        instructions: 'Envía USDT vía Binance Pay sin comisiones a nuestro Pay ID o Correo.'
+      },
+      zinli: {
+        enabled: true,
+        name: 'Zinli (USD)',
+        email: 'pagos@klippve.com',
+        accountHolder: 'KlippVE',
+        holderName: 'KlippVE',
+        instructions: 'Transfiere el monto exacto en USD a nuestro correo de Zinli.'
+      },
+      paypal: {
+        enabled: true,
+        name: 'PayPal (USD)',
+        email: 'pagos@klippve.com',
+        paypalMeLink: '',
+        instructions: 'Envía el pago en USD vía PayPal como familiar/amigo.'
+      }
     }
   },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   updatedAt: { type: Date, default: Date.now }
-});
+}, { minimize: false, strict: false });
 
 // Planes por defecto iniciales
 const DEFAULT_PLANS = [
