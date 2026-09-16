@@ -85,7 +85,7 @@ const DEFAULT_PLANS = [
     historyDays: 365,
     description: 'Desbloquea escaneo visual con IA, lectura de etiquetas por voz y más.',
     features: [
-      '✨ Escáner visual de etiquetas con IA Google Gemini',
+      '✨ Escáner visual de etiquetas con IA Klipp',
       '🎙️ Entrada por voz con cálculo automático de fracciones/gramos',
       '🛒 Carrito de compras inteligente con totalización en Bs y USD',
       '📊 Histórico completo de tasas y gráficos interactivos',
@@ -107,7 +107,7 @@ const DEFAULT_PLANS = [
     features: [
       '🌟 Todos los beneficios de Klipp Pro por 12 meses',
       '💰 Descuento especial de 2 meses gratis',
-      '🚀 Acceso prioritario a nuevos modelos de IA Gemini',
+      '🚀 Acceso prioritario a nuevas funciones de IA Klipp',
       '🛡️ Soporte directo VIP por WhatsApp'
     ],
     isPopular: false,
