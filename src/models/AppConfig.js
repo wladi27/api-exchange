@@ -7,6 +7,8 @@ const PlanSchema = new mongoose.Schema({
   durationMonths: { type: Number, default: 1 },
   rateLimitPerMin: { type: Number, default: 300 },
   monthlyQuota: { type: Number, default: 50000 },
+  aiMonthlyQuota: { type: Number, default: 3000 }, // Peticiones IA (Escáner + Voz) al mes
+  maxBankAccounts: { type: Number, default: 2 },   // Cuentas bancarias permitidas
   historyDays: { type: Number, default: 365 },
   description: { type: String, default: '' },
   features: [{ type: String }],
@@ -74,12 +76,14 @@ const DEFAULT_PLANS = [
     durationMonths: 1,
     rateLimitPerMin: 30,
     monthlyQuota: 1000,
+    aiMonthlyQuota: 0,
+    maxBankAccounts: 2,
     historyDays: 7,
     description: 'Tasas oficiales en vivo, calculadora manual y generador de cobros BDV.',
     features: [
       'Tasas oficiales BCV y Binance P2P en tiempo real',
       'Calculadora de cambio y montos rápidos',
-      'Generador de cobros Pago Móvil para BDV y banca nacional',
+      'Generador de cobros Pago Móvil (Hasta 2 cuentas)',
       'Conversor sin conexión a internet'
     ],
     isPopular: false,
@@ -93,14 +97,16 @@ const DEFAULT_PLANS = [
     durationMonths: 1,
     rateLimitPerMin: 600,
     monthlyQuota: 100000,
+    aiMonthlyQuota: 3000,
+    maxBankAccounts: 10,
     historyDays: 365,
     description: 'Desbloquea escaneo visual con IA, lectura de etiquetas por voz y más.',
     features: [
-      '✨ Escáner visual de etiquetas con IA Klipp',
+      '✨ 3.000 escaneos y lecturas con IA Klipp al mes',
+      '🏦 Hasta 10 Cuentas Bancarias y Pago Móvil',
       '🎙️ Entrada por voz con cálculo automático de fracciones/gramos',
       '🛒 Carrito de compras inteligente con totalización en Bs y USD',
-      '📊 Histórico completo de tasas y gráficos interactivos',
-      '⚡ Sin límites de consultas ni publicidad'
+      '📊 Histórico completo de tasas y gráficos interactivos'
     ],
     isPopular: true,
     badge: 'Más Popular',
@@ -113,10 +119,13 @@ const DEFAULT_PLANS = [
     durationMonths: 12,
     rateLimitPerMin: 1200,
     monthlyQuota: 1000000,
+    aiMonthlyQuota: 5000,
+    maxBankAccounts: 25,
     historyDays: 1825,
     description: 'Ahorra más del 30% con suscripción anual y soporte prioritario.',
     features: [
-      '🌟 Todos los beneficios de Klipp Pro por 12 meses',
+      '🌟 5.000 consultas de IA Klipp al mes',
+      '🏦 Hasta 25 Cuentas Bancarias respaldadas',
       '💰 Descuento especial de 2 meses gratis',
       '🚀 Acceso prioritario a nuevas funciones de IA Klipp',
       '🛡️ Soporte directo VIP por WhatsApp'
@@ -132,13 +141,16 @@ const DEFAULT_PLANS = [
     durationMonths: 1,
     rateLimitPerMin: 2000,
     monthlyQuota: 2000000,
+    aiMonthlyQuota: 20000,
+    maxBankAccounts: 100,
     historyDays: 3650,
     description: 'Para comercios, supermercados y bodegones de alto volumen.',
     features: [
-      '🏪 Múltiples cuentas bancarias y cajeros',
+      '🏪 Hasta 100 Cuentas Bancarias y cajeros',
+      '🤖 20.000 consultas mensuales de IA Klipp',
       '📦 Exportación de listas de compras y reportes PDF/Excel',
       '🔑 Acceso a API Keys para conectar con sistemas POS/ERP',
-      '🤖 Procesamiento masivo de etiquetas de precios en lote'
+      '⚡ Procesamiento masivo de etiquetas de precios en lote'
     ],
     isPopular: false,
     badge: 'Comercios',

@@ -16,5 +16,6 @@ router.post(
 );
 router.get('/my-subscription', requireAuth, billingController.getMySubscription);
 router.get('/my-payments', requireAuth, billingController.getMyPayments);
+router.post('/ai-quota/check-and-consume', requireAuth, billingController.checkAndConsumeAiQuota);
 
 module.exports = router;

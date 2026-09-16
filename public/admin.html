@@ -606,6 +606,16 @@
               <label>Duración (Meses):</label>
               <input type="number" class="form-input-custom plan-duration" value="${p.durationMonths || 1}">
             </div>
+            <div class="form-group-custom" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div>
+                <label>🤖 Peticiones IA / Mes:</label>
+                <input type="number" class="form-input-custom plan-ai-monthly" value="${p.aiMonthlyQuota !== undefined ? p.aiMonthlyQuota : (p.id === 'free' ? 0 : 3000)}" placeholder="Ej: 3000">
+              </div>
+              <div>
+                <label>🏦 Máx. Cuentas Bancarias:</label>
+                <input type="number" class="form-input-custom plan-max-accounts" value="${p.maxBankAccounts !== undefined ? p.maxBankAccounts : (p.id === 'free' ? 2 : 10)}" placeholder="Ej: 10">
+              </div>
+            </div>
             <div class="form-group-custom">
               <label>Descripción Breve:</label>
               <input type="text" class="form-input-custom plan-desc" value="${p.description || ''}">
@@ -633,6 +643,8 @@
           const name = card.querySelector('.plan-name').value.trim();
           const priceUsd = parseFloat(card.querySelector('.plan-price').value) || 0;
           const durationMonths = parseInt(card.querySelector('.plan-duration').value) || 1;
+          const aiMonthlyQuota = parseInt(card.querySelector('.plan-ai-monthly').value) || 0;
+          const maxBankAccounts = parseInt(card.querySelector('.plan-max-accounts').value) || 2;
           const description = card.querySelector('.plan-desc').value.trim();
           const badge = card.querySelector('.plan-badge').value.trim();
           const featuresRaw = card.querySelector('.plan-features').value;
@@ -643,6 +655,8 @@
             name,
             priceUsd,
             durationMonths,
+            aiMonthlyQuota,
+            maxBankAccounts,
             description,
             badge: badge || undefined,
             features
@@ -654,7 +668,7 @@
           body: JSON.stringify({ plans: updatedPlans })
         });
 
-        showToast(res.message || 'Planes actualizados con éxito.', 'success');
+        showToast(res.message || 'Planes y límites actualizados con éxito.', 'success');
       } catch (err) {
         showToast(err.message, 'error');
       }

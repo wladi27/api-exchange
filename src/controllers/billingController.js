@@ -1,5 +1,6 @@
 const Payment = require('../models/Payment');
 const User = require('../models/User');
+const BankAccount = require('../models/BankAccount');
 const AppConfig = require('../models/AppConfig');
 const ExchangeRate = require('../models/ExchangeRate');
 const { getExchangeRates } = require('../services/scraperService');
@@ -171,20 +172,29 @@ async function getMySubscription(req, res) {
       return res.status(404).json({ success: false, error: 'UserNotFound' });
     }
 
-    const [payments, config] = await Promise.all([
+    const [payments, config, accountsCount] = await Promise.all([
       Payment.find({ userId: user._id }).sort({ createdAt: -1 }).limit(10),
-      AppConfig.getOrCreate()
+      AppConfig.getOrCreate(),
+      BankAccount.countDocuments({ userId: user._id })
     ]);
 
     const activePlan = (config.plans || []).find(p => p.id === user.plan) || {
       id: user.plan || 'free',
-      name: user.plan === 'pro' ? 'Klipp Pro' : user.plan === 'business' ? 'Klipp Negocio' : 'Klipp Free'
+      name: user.plan === 'pro' ? 'Klipp Pro' : user.plan === 'business' ? 'Klipp Negocio' : 'Klipp Free',
+      aiMonthlyQuota: user.plan === 'business' ? 20000 : user.plan === 'pro' ? 3000 : user.plan === 'pro_annual' ? 5000 : 0,
+      maxBankAccounts: user.plan === 'business' ? 100 : user.plan === 'pro' ? 10 : user.plan === 'pro_annual' ? 25 : 2
     };
 
     let daysRemaining = 0;
     if (user.subscriptionExpiresAt && user.subscriptionExpiresAt > new Date()) {
       daysRemaining = Math.ceil((new Date(user.subscriptionExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
     }
+
+    // Verificar mes actual para uso de IA
+    const currentMonthStr = new Date().toISOString().slice(0, 7);
+    const aiMonthlyUsed = (user.aiUsage && user.aiUsage.currentMonth === currentMonthStr) ? (user.aiUsage.monthlyCount || 0) : 0;
+    const aiLimit = activePlan.aiMonthlyQuota !== undefined ? activePlan.aiMonthlyQuota : 3000;
+    const maxAccounts = activePlan.maxBankAccounts !== undefined ? activePlan.maxBankAccounts : 2;
 
     return res.json({
       success: true,
@@ -197,6 +207,13 @@ async function getMySubscription(req, res) {
         expiresAt: user.subscriptionExpiresAt,
         daysRemaining
       },
+      quotaInfo: {
+        aiMonthlyQuota: aiLimit,
+        aiMonthlyUsed: aiMonthlyUsed,
+        aiMonthlyRemaining: Math.max(0, aiLimit - aiMonthlyUsed),
+        maxBankAccounts: maxAccounts,
+        currentBankAccounts: accountsCount
+      },
       recentPayments: payments
     });
   } catch (error) {
@@ -205,6 +222,93 @@ async function getMySubscription(req, res) {
       success: false,
       error: 'ServerError',
       message: 'Error al consultar datos de suscripción.'
+    });
+  }
+}
+
+// POST /api/v1/billing/ai-quota/check-and-consume
+async function checkAndConsumeAiQuota(req, res) {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'UserNotFound' });
+    }
+
+    const config = await AppConfig.getOrCreate();
+    const userPlanId = user.plan || 'free';
+    const planConfig = (config.plans || []).find(p => p.id === userPlanId) || {
+      id: userPlanId,
+      name: userPlanId.toUpperCase(),
+      aiMonthlyQuota: userPlanId === 'business' ? 20000 : userPlanId === 'pro' ? 3000 : userPlanId === 'pro_annual' ? 5000 : 0
+    };
+
+    const monthlyLimit = planConfig.aiMonthlyQuota !== undefined ? planConfig.aiMonthlyQuota : 0;
+    const currentMonthStr = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+
+    // Inicializar aiUsage si no existe
+    if (!user.aiUsage) {
+      user.aiUsage = {
+        monthlyCount: 0,
+        currentMonth: currentMonthStr,
+        totalRequests: 0
+      };
+    }
+
+    // Reiniciar automáticamente si cambió el mes
+    if (user.aiUsage.currentMonth !== currentMonthStr) {
+      user.aiUsage.monthlyCount = 0;
+      user.aiUsage.currentMonth = currentMonthStr;
+    }
+
+    // Validar si el plan no tiene cuota (ej: Free con 0 consultas)
+    if (monthlyLimit <= 0) {
+      return res.status(403).json({
+        success: false,
+        allowed: false,
+        error: 'AiNotAvailableInPlan',
+        code: 'AI_NOT_AVAILABLE',
+        plan: userPlanId,
+        message: 'Las funciones de Inteligencia Artificial (Escáner visual y Dictado por voz) están reservadas para los planes Klipp Pro y Klipp Negocio. Actualiza tu plan para desbloquearlas.',
+        monthlyLimit: 0,
+        monthlyUsed: user.aiUsage.monthlyCount
+      });
+    }
+
+    // Validar si ha superado el límite mensual
+    if (user.aiUsage.monthlyCount >= monthlyLimit) {
+      return res.status(403).json({
+        success: false,
+        allowed: false,
+        error: 'AiQuotaExceeded',
+        code: 'AI_QUOTA_EXCEEDED',
+        plan: userPlanId,
+        message: `Has alcanzado tu límite mensual de ${monthlyLimit.toLocaleString()} consultas de IA Klipp para el plan ${planConfig.name}. Tu cuota se reiniciará el próximo mes o puedes actualizar a Klipp Negocio.`,
+        monthlyLimit,
+        monthlyUsed: user.aiUsage.monthlyCount,
+        remaining: 0
+      });
+    }
+
+    // Consumir 1 petición
+    user.aiUsage.monthlyCount += 1;
+    user.aiUsage.totalRequests = (user.aiUsage.totalRequests || 0) + 1;
+    user.markModified('aiUsage');
+    await user.save();
+
+    return res.json({
+      success: true,
+      allowed: true,
+      monthlyUsed: user.aiUsage.monthlyCount,
+      monthlyLimit,
+      remaining: Math.max(0, monthlyLimit - user.aiUsage.monthlyCount),
+      plan: userPlanId
+    });
+  } catch (error) {
+    console.error('Error en checkAndConsumeAiQuota:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'ServerError',
+      message: 'Error al verificar cuota de Inteligencia Artificial.'
     });
   }
 }
@@ -232,5 +336,6 @@ module.exports = {
   getPaymentMethods,
   reportPayment,
   getMySubscription,
-  getMyPayments
+  getMyPayments,
+  checkAndConsumeAiQuota
 };

@@ -1,4 +1,5 @@
 const BankAccount = require('../models/BankAccount');
+const AppConfig = require('../models/AppConfig');
 const { isDbConnected } = require('../config/db');
 
 // Validar y sanitizar texto simple
@@ -134,6 +135,28 @@ async function createAccount(req, res) {
     }
 
     const existingCount = await BankAccount.countDocuments({ userId: req.user._id });
+
+    // Validar límite de cuentas bancarias según el plan del usuario
+    const userPlanId = req.user.plan || 'free';
+    const config = await AppConfig.getOrCreate();
+    const currentPlanConfig = (config.plans || []).find(p => p.id === userPlanId) || {
+      name: userPlanId.toUpperCase(),
+      maxBankAccounts: userPlanId === 'business' ? 100 : (userPlanId === 'pro' || userPlanId === 'pro_annual') ? 10 : 2
+    };
+    const maxAccounts = currentPlanConfig.maxBankAccounts !== undefined ? currentPlanConfig.maxBankAccounts : 2;
+
+    if (existingCount >= maxAccounts) {
+      return res.status(403).json({
+        success: false,
+        error: 'AccountLimitReached',
+        code: 'ACCOUNT_LIMIT_REACHED',
+        maxAllowed: maxAccounts,
+        currentCount: existingCount,
+        plan: userPlanId,
+        message: `Has alcanzado el límite de ${maxAccounts} cuentas para tu plan actual (${currentPlanConfig.name || userPlanId.toUpperCase()}). Actualiza a Klipp Pro para registrar hasta 10 cuentas.`
+      });
+    }
+
     const shouldBeDefault = isDefault || existingCount === 0;
 
     // Si la nueva cuenta será default, remover default de las demás

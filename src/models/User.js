@@ -51,6 +51,11 @@ const UserSchema = new mongoose.Schema(
       trim: true,
       default: ''
     },
+    aiUsage: {
+      monthlyCount: { type: Number, default: 0 },
+      currentMonth: { type: String, default: () => new Date().toISOString().slice(0, 7) }, // "YYYY-MM"
+      totalRequests: { type: Number, default: 0 }
+    },
     refreshTokens: [
       {
         token: String,
