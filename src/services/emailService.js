@@ -167,36 +167,46 @@ class EmailService {
     const subject = `${otp} es tu código de recuperación de Klipp`;
     const html = this.getOtpEmailTemplate(name, otp);
 
+    const apiKey = process.env.RESEND_API_KEY || this.resendApiKey;
+    const fromAddress = process.env.EMAIL_FROM || 'Klipp <seguridad@klipp.lat>';
+
     // 1. Si hay clave de Resend configurada, enviar vía Resend API
-    if (this.resendApiKey && !this.resendApiKey.includes('tu_resend_api_key')) {
+    if (apiKey && !apiKey.includes('tu_resend_api_key')) {
       try {
         const response = await axios.post(
           'https://api.resend.com/emails',
           {
-            from: this.fromEmail.includes('resend.dev') ? this.fromEmail : 'Klipp <onboarding@resend.dev>',
+            from: fromAddress,
             to: [toEmail],
             subject,
             html,
           },
           {
             headers: {
-              Authorization: `Bearer ${this.resendApiKey}`,
+              Authorization: `Bearer ${apiKey}`,
               'Content-Type': 'application/json',
             },
-            timeout: 10000,
+            timeout: 12000,
           }
         );
 
-        console.log(`📧 [Resend] Correo de recuperación enviado a ${toEmail}. ID:`, response.data?.id);
+        console.log(`📧 [Resend] Correo de recuperación enviado a ${toEmail} desde ${fromAddress}. ID:`, response.data?.id);
         return { success: true, provider: 'resend', id: response.data?.id };
       } catch (err) {
-        console.warn('⚠️ [Resend] Error enviando correo vía API:', err.response?.data || err.message);
+        const errorData = err.response?.data || {};
+        const errorMsg = errorData.message || err.message;
+        console.error('❌ [Resend] Error enviando correo vía API:', errorData || err.message);
+        return {
+          success: false,
+          provider: 'resend',
+          error: errorMsg
+        };
       }
     }
 
-    // 2. Modo desarrollo / consola (Fallback sin romper el flujo)
+    // 2. Modo desarrollo / consola si no hay API key configurada
     console.log('====================================================');
-    console.log(`🔑 [Klipp Auth] CÓDIGO OTP GENERADO PARA: ${toEmail}`);
+    console.log(`🔑 [Klipp Auth (Dev)] CÓDIGO OTP PARA: ${toEmail}`);
     console.log(`👉 CÓDIGO: ${otp}`);
     console.log(`⏱️ Válido por 15 minutos.`);
     console.log('====================================================');
@@ -205,7 +215,6 @@ class EmailService {
       success: true,
       provider: 'dev_console',
       testMode: true,
-      otp, // En desarrollo se devuelve para pruebas directas en cliente si se desea
     };
   }
 }

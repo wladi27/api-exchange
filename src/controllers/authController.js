@@ -332,13 +332,21 @@ async function forgotPassword(req, res) {
     user.resetPasswordExpires = expiresAt;
     await user.save();
 
-    // Enviar correo con el servicio de email (Resend / SMTP / dev fallback)
+    // Enviar correo con el servicio de email (Resend / klipp.lat)
     const emailResult = await emailService.sendPasswordResetOtp(cleanEmail, user.name, otp);
+
+    if (!emailResult.success) {
+      return res.status(500).json({
+        success: false,
+        error: 'EmailSendFailed',
+        message: emailResult.error || 'No se pudo enviar el correo de recuperación. Inténtalo de nuevo más tarde.'
+      });
+    }
 
     return res.json({
       success: true,
       message: 'Código de recuperación enviado a tu correo electrónico.',
-      devOtp: emailResult.testMode ? otp : undefined // En dev se facilita para pruebas inmediatas
+      devOtp: emailResult.testMode ? otp : undefined
     });
   } catch (error) {
     console.error('Error en forgotPassword:', error);
