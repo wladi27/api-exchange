@@ -316,11 +316,11 @@ async function forgotPassword(req, res) {
     const cleanEmail = email.toLowerCase().trim();
     const user = await User.findOne({ email: cleanEmail });
 
-    // Por seguridad, si el usuario no existe, devolvemos éxito para evitar enumeración de correos
     if (!user) {
-      return res.json({
-        success: true,
-        message: 'Si el correo está registrado, recibirás un código de recuperación en breve.'
+      return res.status(404).json({
+        success: false,
+        error: 'UserNotFound',
+        message: 'No existe ninguna cuenta registrada con este correo electrónico. Por favor verifica o regístrate.'
       });
     }
 
