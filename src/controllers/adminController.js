@@ -2,6 +2,7 @@ const Payment = require('../models/Payment');
 const User = require('../models/User');
 const ApiKey = require('../models/ApiKey');
 const AppConfig = require('../models/AppConfig');
+const emailService = require('../services/emailService');
 const { PLANS } = require('../config/constants');
 
 // GET /api/v1/admin/config
@@ -201,6 +202,16 @@ async function approvePayment(req, res) {
       }
     );
 
+    // Notificar al usuario por correo electrónico automáticamente
+    emailService.sendPaymentApprovedEmail(
+      user.email,
+      user.name,
+      payment.plan,
+      newExpiresAt,
+      payment.amountPaid,
+      payment.currency
+    ).catch(e => console.warn('⚠️ Error al enviar correo de confirmación de pago:', e.message));
+
     return res.json({
       success: true,
       message: `Pago aprobado exitosamente. Usuario actualizado al plan "${payment.plan}" hasta el ${newExpiresAt.toLocaleDateString()}.`,
@@ -249,6 +260,18 @@ async function rejectPayment(req, res) {
     payment.adminNotes = reason ? reason.trim() : 'Comprobante o referencia no válidos.';
     payment.approvedBy = adminUser._id;
     await payment.save();
+
+    // Notificar al usuario por correo electrónico
+    User.findById(payment.userId).then(user => {
+      if (user && user.email) {
+        emailService.sendPaymentRejectedEmail(
+          user.email,
+          user.name,
+          payment.plan,
+          payment.adminNotes
+        ).catch(e => console.warn('⚠️ Error enviando correo de rechazo:', e.message));
+      }
+    }).catch(() => {});
 
     return res.json({
       success: true,
