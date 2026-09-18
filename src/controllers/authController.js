@@ -5,6 +5,7 @@ const User = require('../models/User');
 const ApiKey = require('../models/ApiKey');
 const { JWT_SECRET } = require('../middlewares/authMiddleware');
 const { isDbConnected } = require('../config/db');
+const emailService = require('../services/emailService');
 
 function generateToken(user) {
   return jwt.sign(
@@ -255,6 +256,172 @@ async function changePassword(req, res) {
   }
 }
 
+// PUT /api/v1/auth/profile
+async function updateProfile(req, res) {
+  try {
+    const { name, company, phone } = req.body;
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'NotFound',
+        message: 'Usuario no encontrado.'
+      });
+    }
+
+    if (name && name.trim().length > 0) user.name = name.trim();
+    if (company !== undefined) user.company = company.trim();
+    if (phone !== undefined) user.phone = phone.trim();
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: 'Perfil actualizado exitosamente.',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        company: user.company,
+        phone: user.phone,
+        role: user.role,
+        plan: user.plan,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionExpiresAt: user.subscriptionExpiresAt
+      }
+    });
+  } catch (error) {
+    console.error('Error en updateProfile:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'ServerError',
+      message: 'Error al actualizar perfil.'
+    });
+  }
+}
+
+// POST /api/v1/auth/forgot-password
+async function forgotPassword(req, res) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'BadRequest',
+        message: 'El correo electrónico es requerido.'
+      });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: cleanEmail });
+
+    // Por seguridad, si el usuario no existe, devolvemos éxito para evitar enumeración de correos
+    if (!user) {
+      return res.json({
+        success: true,
+        message: 'Si el correo está registrado, recibirás un código de recuperación en breve.'
+      });
+    }
+
+    // Generar código numérico seguro de 6 dígitos
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+
+    user.resetPasswordOtp = otp;
+    user.resetPasswordExpires = expiresAt;
+    await user.save();
+
+    // Enviar correo con el servicio de email (Resend / SMTP / dev fallback)
+    const emailResult = await emailService.sendPasswordResetOtp(cleanEmail, user.name, otp);
+
+    return res.json({
+      success: true,
+      message: 'Código de recuperación enviado a tu correo electrónico.',
+      devOtp: emailResult.testMode ? otp : undefined // En dev se facilita para pruebas inmediatas
+    });
+  } catch (error) {
+    console.error('Error en forgotPassword:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'ServerError',
+      message: 'Error al procesar la solicitud de recuperación.'
+    });
+  }
+}
+
+// POST /api/v1/auth/reset-password
+async function resetPassword(req, res) {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'BadRequest',
+        message: 'Correo, código de verificación y nueva contraseña son requeridos.'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: 'BadRequest',
+        message: 'La nueva contraseña debe tener al menos 6 caracteres.'
+      });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanOtp = otp.toString().trim();
+
+    const user = await User.findOne({
+      email: cleanEmail,
+      resetPasswordOtp: cleanOtp,
+      resetPasswordExpires: { $gt: new Date() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: 'InvalidOtp',
+        message: 'El código ingresado es inválido o ha expirado. Solicita uno nuevo.'
+      });
+    }
+
+    // Hashear y guardar nueva contraseña
+    const salt = await bcrypt.genSalt(10);
+    user.passwordHash = await bcrypt.hash(newPassword, salt);
+    user.resetPasswordOtp = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    // Generar token JWT para inicio de sesión inmediato
+    const token = generateToken(user);
+
+    return res.json({
+      success: true,
+      message: 'Contraseña restablecida exitosamente. Bienvenido de vuelta.',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        plan: user.plan,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionExpiresAt: user.subscriptionExpiresAt
+      }
+    });
+  } catch (error) {
+    console.error('Error en resetPassword:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'ServerError',
+      message: 'Error al restablecer la contraseña.'
+    });
+  }
+}
+
 // POST /api/v1/auth/google
 async function googleLogin(req, res) {
   try {
@@ -392,5 +559,8 @@ module.exports = {
   login,
   googleLogin,
   getMe,
-  changePassword
+  changePassword,
+  updateProfile,
+  forgotPassword,
+  resetPassword
 };

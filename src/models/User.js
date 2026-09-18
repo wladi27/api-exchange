@@ -51,6 +51,19 @@ const UserSchema = new mongoose.Schema(
       trim: true,
       default: ''
     },
+    phone: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    resetPasswordOtp: {
+      type: String,
+      default: null
+    },
+    resetPasswordExpires: {
+      type: Date,
+      default: null
+    },
     aiUsage: {
       monthlyCount: { type: Number, default: 0 },
       currentMonth: { type: String, default: () => new Date().toISOString().slice(0, 7) }, // "YYYY-MM"
